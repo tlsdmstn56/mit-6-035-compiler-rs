@@ -2,4 +2,5 @@
 
 pub mod ast;
 pub mod parser;
+pub mod semantic_analyzer;
 lalrpop_mod!(pub decaf);
