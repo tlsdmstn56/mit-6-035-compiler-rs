@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use crate::ast::*;
 
 grammar;
@@ -13,14 +14,15 @@ Comma<T>: Vec<T> = { // (1)
 };
 
 TVarDecl: VarDecl = 
-    <t:TType> <i:Comma<TIdentifier>> => VarDecl{type: t, identifiers:i};
+    <t:TType> <i:Comma<TIdentifier>> => VarDecl{type_: t, identifiers:i};
 
 
 TStatement: Statement = {
     <l: TLocation> <a:TAssignOp> <e:TExpr> ";" => Statement::Assign{dst:l, op: a, val: e},
     <m: TMethodCall> ";" => Statement::MethodCall(m),
-    "if" "(" <c:TExpr> ")" <tb:TBlock> ("else" <TBlock>)? 
-         => Statement::IfElse{cond:c, true_block: tb, false_block: <>},
+    "if" "(" <c:TExpr> ")" <tb:TBlock> => Statement::IfElse{cond:c, true_block: tb, false_block: None},
+    "if" "(" <c:TExpr> ")" <tb:TBlock> "else" <fb:TBlock> 
+         => Statement::IfElse{cond:c, true_block: tb, false_block: Some(fb)},
     "for" <i:TIdentifier> "=" <s:TExpr> "," <e:TExpr> <b:TBlock>
         => Statement::Loop{index_var:i, start:s, end:e, block:b },
     "return" <r:TExpr?> => Statement::Return{val: r},
@@ -34,12 +36,12 @@ TBlock: Block =
 
 
 TLocation: Location = {
-    <i:TIdentifier> => Location{name: i, arr_size: 1},
+    <i:TIdentifier> => Location{name: i, arr_size: Box::new(Expr0::Literal(Literal::Int(1)))},
     <i:TIdentifier> "[" <a:TExpr> "]" => Location{name: i, arr_size: a},
 };
 
 TFieldDecl: FieldDecl = {
-    <t:TType> <l:Comma<TLocation>> => FieldDecl{ type: t, loc: l},
+    <t:TType> <l:Comma<TLocation>> => FieldDecl{ type_: t, loc: l},
 };
 
 
@@ -53,49 +55,49 @@ pub TProgram: Program = {
 
 TMethodName: MethodName = <s:TIdentifier> => s;
 
-TIdentifier: Identifier = <s:r"[a-zA-Z_][a-zA-Z0-9_]*"> => s;
+TIdentifier: Identifier = <s:r"[a-zA-Z_][a-zA-Z0-9_]*"> => s.to_string();
 
 TExpr0: Expr = {
-    <l: TLocation> => Box::new(Expr::Location(l)),
-    <l: TMethodCall> => Box::new(Expr::MethodCall(l)),
-    <l: TLiteral> => Box::new(Expr::Literal(l)),
-    "-" <l: TExpr1> => Box::new(Expr::Unary{expr:l, op:UnaryOp::NegInt}),
+    <l: TLocation> => Box::new(Expr0::Location(l)),
+    <l: TMethodCall> => Box::new(Expr0::MethodCall(l)),
+    <l: TLiteral> => Box::new(Expr0::Literal(l)),
+    "-" <l: TExpr1> => Box::new(Expr0::Unary(Unary{expr:l, op:UnaryOp::NegInt})),
 };
 
 TExpr1: Expr = {
-    "!" <l: TExpr1> => Box::new(Expr::Unary{expr:l, op:UnaryOp::NegBool}),
+    "!" <l: TExpr1> => Box::new(Expr0::Unary(Unary{expr:l, op:UnaryOp::NegBool})),
     TExpr0,
 };
 
 TExpr2: Expr = {
-    <lhs: TExpr2> "*" <rhs:TExpr1> =>Box::new(Expr::Binary{lhs: lhs, rhs: rhs, op:ArithOp::Mul}),
-    <lhs: TExpr2> "/" <rhs:TExpr1> =>Box::new(Expr::Binary{lhs: lhs, rhs: rhs, op:ArithOp::Div}),
-    <lhs: TExpr2> "%" <rhs:TExpr1> =>Box::new(Expr::Binary{lhs: lhs, rhs: rhs, op:ArithOp::Mod}),
+    <lhs: TExpr2> "*" <rhs:TExpr1> =>Box::new(Expr0::Binary(Binary{lhs: lhs, rhs: rhs, op:BinaryOp::Arith(ArithOp::Mul)})),
+    <lhs: TExpr2> "/" <rhs:TExpr1> =>Box::new(Expr0::Binary(Binary{lhs: lhs, rhs: rhs, op:BinaryOp::Arith(ArithOp::Div)})),
+    <lhs: TExpr2> "%" <rhs:TExpr1> =>Box::new(Expr0::Binary(Binary{lhs: lhs, rhs: rhs, op:BinaryOp::Arith(ArithOp::Mod)})),
     TExpr1,
 };
 
 TExpr3: Expr = {
-    <lhs: TExpr3> "+" <rhs:TExpr2> =>Box::new(Expr::Binary{lhs: lhs, rhs: rhs, op:ArithOp::Add}),
-    <lhs: TExpr3> "-" <rhs:TExpr2> =>Box::new(Expr::Binary{lhs: lhs, rhs: rhs, op:ArithOp::Sub}),
+    <lhs: TExpr3> "+" <rhs:TExpr2> =>Box::new(Expr0::Binary(Binary{lhs: lhs, rhs: rhs, op:BinaryOp::Arith(ArithOp::Add)})),
+    <lhs: TExpr3> "-" <rhs:TExpr2> =>Box::new(Expr0::Binary(Binary{lhs: lhs, rhs: rhs, op:BinaryOp::Arith(ArithOp::Sub)})),
     TExpr2,
 };
 
 TExpr4: Expr = {
-    <lhs: TExpr4> <op: TCompareOp> <rhs:TExpr3> => Box::new(Expr::Binary{lhs: lhs, rhs: rhs, op:op}),
+    <lhs: TExpr4> <op: TCompareOp> <rhs:TExpr3> => Box::new(Expr0::Binary(Binary{lhs: lhs, rhs: rhs, op:BinaryOp::Compare(op)})),
     TExpr3,                                         
 };
 
 TExpr5: Expr = {
-    <lhs: TExpr5> <op: TEqOp> <rhs:TExpr4> => Box::new(Expr::Binary{lhs: lhs, rhs: rhs, op:op}),
+    <lhs: TExpr5> <op: TEqOp> <rhs:TExpr4> => Box::new(Expr0::Binary(Binary{lhs: lhs, rhs: rhs, op:BinaryOp::Eq(op)})),
     TExpr4,
 };
 TExpr6: Expr = {
-    <lhs: TExpr6> "&&" <rhs:TExpr5> => Box::new(Expr::Binary{lhs: lhs, rhs: rhs, op:CondOp::And}),
+    <lhs: TExpr6> "&&" <rhs:TExpr5> => Box::new(Expr0::Binary(Binary{lhs: lhs, rhs: rhs, op:BinaryOp::Cond(CondOp::And)})),
     TExpr5,
 };
 
 TExpr7: Expr = {
-    <lhs: TExpr7> "||" <rhs:TExpr6> => Box::new(Expr::Binary{lhs: lhs, rhs: rhs, op:CondOp::Or}),
+    <lhs: TExpr7> "||" <rhs:TExpr6> => Box::new(Expr0::Binary(Binary{lhs: lhs, rhs: rhs, op:BinaryOp::Cond(CondOp::Or)})),
     TExpr6,
 };
 TExpr: Expr = {
@@ -115,9 +117,13 @@ TMethodCall: MethodCall = {
         name: name,
         args: args,
     },
-    "callout" "(" <name: TStringLiteral> ("," <Comma<TExpr>>)? ")" => MethodCall::Callout{
+    "callout" "(" <name: TStringLiteral> ")" => MethodCall::Callout{
         name: name,
-        args: <>,
+        args: Vec::new(), 
+    },
+    "callout" "(" <name: TStringLiteral> "," <args: Comma<TCalloutArg>> ")" => MethodCall::Callout{
+        name: name,
+        args: args,
     },
 };
 
@@ -180,9 +186,9 @@ TBoolLiteral: BoolLiteral = {
     "false" =>  BoolLiteral::False,
 };
 
-TCharLiteral: CharLiteral = <s:r"'.'"> => s[1];
+TCharLiteral: CharLiteral = <s:r"'.'"> => s.as_bytes()[1 as usize] as char;
 
-TStringLiteral: StringLiteral = <s:r#"".*""#> => String::from_str(s[1..(s.len()-1)]);
+TStringLiteral: StringLiteral = <s:r#"".*""#> => String::from_str(&s[1..(s.len()-1)]).unwrap();
 
 TCalloutArg: CalloutArg = {
     <t:TExpr> => CalloutArg::Expr(t),
@@ -190,7 +196,7 @@ TCalloutArg: CalloutArg = {
 };
 
 TMethodArg: MethodArg = {
-    <t:TType> <i: TIdentifier> => MethodArg {type: t, name:i},
+    <t:TType> <i: TIdentifier> => MethodArg {type_: t, name:i},
 };
 
 TMethodDecl: MethodDecl = {

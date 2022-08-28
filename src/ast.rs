@@ -1,18 +1,22 @@
+#[derive(Debug)]
 pub struct FieldDecl {
-    pub r#type: Type,
+    pub type_: Type,
     pub loc: Vec<Location>,
 }
 
+#[derive(Debug)]
 pub struct VarDecl {
-    pub r#type: Type,
+    pub type_: Type,
     pub identifiers: Vec<Identifier>,
 }
 
+#[derive(Debug)]
 pub struct Block {
     pub var_decls: Vec<VarDecl>,
     pub statements: Vec<Statement>,
 }
 
+#[derive(Debug)]
 pub enum Statement {
     Assign{dst:Location, op: AssignOp, val: Expr},
     MethodCall(MethodCall),
@@ -24,22 +28,26 @@ pub enum Statement {
     Block(Block)
 }
 
+#[derive(Debug)]
 pub struct Location {
     pub name: String,
-    pub arr_size: i32,
+    pub arr_size: Expr,
 }
 
+#[derive(Debug)]
 pub struct MethodArg {
-    pub r#type: Type,
+    pub type_: Type,
     pub name: Identifier,
 }
 
+#[derive(Debug)]
 pub struct MethodDecl {
     pub return_type: Type,
     pub name: Identifier,
     pub args: Vec<MethodArg>,
 }
 
+#[derive(Debug)]
 pub struct Program {
     pub field_decls: Vec<FieldDecl>,
     pub method_decls: Vec<MethodDecl>,
@@ -53,12 +61,14 @@ pub type Char = char;
 pub type AlphaNum = char;
 pub type Identifier = String;
 
+#[derive(Debug)]
 pub enum Literal {
     Int(IntLiteral),
     Bool(BoolLiteral),
     Char(CharLiteral),
 }
 
+#[derive(Debug)]
 pub enum BinaryOp {
     Arith(ArithOp),
     Compare(CompareOp),
@@ -66,6 +76,7 @@ pub enum BinaryOp {
     Cond(CondOp),
 }
 
+#[derive(Debug)]
 pub enum AssignOp {
     Assign,
     AddAssign,
@@ -74,12 +85,14 @@ pub enum AssignOp {
     DivAssign,
 }
 
+#[derive(Debug)]
 pub enum Type {
     Int, 
     Bool,
     Void,
 }
 
+#[derive(Debug)]
 pub enum ArithOp {
     Add, 
     Sub,
@@ -88,6 +101,7 @@ pub enum ArithOp {
     Mod,
 }
 
+#[derive(Debug)]
 pub enum CompareOp {
    GT,
    GE,
@@ -95,11 +109,13 @@ pub enum CompareOp {
    LE,
 }
 
+#[derive(Debug)]
 pub enum EqOp {
    EQ,
    NE,
 }
 
+#[derive(Debug)]
 pub enum CondOp {
    Or,
    And,
@@ -109,6 +125,8 @@ pub enum CondOp {
 pub type IntLiteral = i32;
 pub type DecimalLiteral = i32;
 pub type HexLiteral = i32;
+
+#[derive(Debug)]
 pub enum BoolLiteral {
     True,
     False, 
@@ -116,17 +134,20 @@ pub enum BoolLiteral {
 pub type CharLiteral = char;
 pub type StringLiteral = String;
 
+#[derive(Debug)]
 pub struct Binary {
     pub lhs : Expr,
     pub rhs : Expr,
     pub op : BinaryOp,
 }
 
+#[derive(Debug)]
 pub enum UnaryOp {
     NegInt,
     NegBool,
 }
 
+#[derive(Debug)]
 pub struct Unary {
     pub expr: Expr,
     pub op: UnaryOp,
@@ -134,6 +155,7 @@ pub struct Unary {
 
 pub type Expr = Box<Expr0>;
 
+#[derive(Debug)]
 pub enum Expr0 {
     Location(Location),
     MethodCall(MethodCall),
@@ -142,12 +164,14 @@ pub enum Expr0 {
     Binary(Binary),
 }
 
+#[derive(Debug)]
 pub enum CalloutArg {
     Expr(Expr),
     StringLiteral(StringLiteral),
 }
 
 
+#[derive(Debug)]
 pub enum MethodCall {
     Method{
         name: MethodName,

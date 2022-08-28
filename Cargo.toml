@@ -8,5 +8,5 @@ authors = ["Eunsoo Sheen <eunsoo.sheen@gmail.com>"]
 lalrpop = "0.19.8"
 
 [dependencies]
-lalrpop-util = "0.19.8"
+lalrpop-util = { version = "0.19.8", features = ["lexer"] }
 regex = "1.5.6"
