@@ -1,0 +1,12 @@
+[package]
+name = "mit-6-035-compiler"
+version = "0.1.0"
+edition = "2021"
+authors = ["Eunsoo Sheen <eunsoo.sheen@gmail.com>"]
+
+[build-dependencies] 
+lalrpop = "0.19.8"
+
+[dependencies]
+lalrpop-util = "0.19.8"
+regex = "1.5.6"
