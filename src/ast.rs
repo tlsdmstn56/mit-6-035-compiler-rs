@@ -1,7 +1,7 @@
 #[derive(Debug)]
 pub struct FieldDecl {
     pub type_: Type,
-    pub loc: Vec<Location>,
+    pub loc: Vec<FieldDecl0>,
 }
 
 #[derive(Debug)]
@@ -35,6 +35,12 @@ pub struct Location {
 }
 
 #[derive(Debug)]
+pub struct FieldDecl0 {
+    pub name: String,
+    pub arr_size: i32,
+}
+
+#[derive(Debug)]
 pub struct MethodArg {
     pub type_: Type,
     pub name: Identifier,
@@ -45,6 +51,7 @@ pub struct MethodDecl {
     pub return_type: Type,
     pub name: Identifier,
     pub args: Vec<MethodArg>,
+    pub block: Block,
 }
 
 #[derive(Debug)]

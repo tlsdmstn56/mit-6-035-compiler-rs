@@ -1,9 +1,12 @@
+use crate::decaf::TProgramParser;
+pub type DecafParser = TProgramParser;
+
 #[cfg(test)]
 mod tests {
-    use crate::decaf::TProgramParser;
     use std::fs::read_to_string;
     use std::path::PathBuf;
     use std::env;
+    use super::DecafParser;
     
 macro_rules! test_parser_illegal {
     ( $testname:ident, $filename:expr ) => {
@@ -13,7 +16,9 @@ macro_rules! test_parser_illegal {
             let path = env::var("CARGO_MANIFEST_DIR").unwrap();
             let path: PathBuf = [&path, "src", "parser", "testcases", "illegal", $filename].iter().collect();
             let s = read_to_string(&path).unwrap();
-            assert!(TProgramParser::new().parse(&s).is_err());
+            let program = DecafParser::new().parse(&s);
+            assert!(program.is_err());
+            
         }
     };
 }
@@ -26,16 +31,16 @@ macro_rules! test_parser_legal {
             let path = env::var("CARGO_MANIFEST_DIR").unwrap();
             let path: PathBuf = [&path, "src", "parser", "testcases", "legal", $filename].iter().collect();
             let s = read_to_string(&path).unwrap();
-            let program = TProgramParser::new().parse(&s);
-            program.unwrap();
-            // assert!(program.is_ok());
+            let program = DecafParser::new().parse(&s);
+            assert!(program.is_ok());
         }
     };
 }
 
     
+    #[test]
     fn test_empty() {
-        assert!(TProgramParser::new().parse("").is_err());
+        assert!(DecafParser::new().parse("").is_err());
     }
     
     test_parser_legal!(test_legal_01, "legal-01");
@@ -77,7 +82,6 @@ macro_rules! test_parser_legal {
     test_parser_illegal!(test_illegal_18, "illegal-18");
     test_parser_illegal!(test_illegal_19, "illegal-19");
     test_parser_illegal!(test_illegal_20, "illegal-20");
-
 }
 
 

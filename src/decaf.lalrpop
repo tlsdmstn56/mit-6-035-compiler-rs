@@ -1,21 +1,46 @@
 use std::str::FromStr;
 use crate::ast::*;
 
-grammar;
+grammar; match {
+    r"//[^\n\r]*[\n\r]*" => { }, // Ignore C++-style comments
+} else {
+    r"\s*" => { }, // Ignore whitespaces 
+    _ 
+}
 
-Comma<T>: Vec<T> = { // (1)
-    <mut v:(<T> ",")*> <e:T?> => match e { // (2)
-        None => v,
-        Some(e) => {
-            v.push(e);
-            v
-        }
+// macro for comma-separated tokens (without trailing comma)
+// should have at least one
+CommaAtLeast<T>: Vec<T> = { 
+    <e:T> <r:("," <T>)*> => {
+        let mut v = vec![e];
+        v.extend(r);
+        v
+    }
+};
+
+// macro for comma-separated tokens (without trailing comma)
+Comma<T>: Vec<T> = {
+    <e:T?> => match e {
+        None => Vec::new(),
+        Some(e) => vec![e],
+    },
+    <e:T> <r:("," <T>)+> => {
+        let mut v = vec![e];
+        v.extend(r);
+        v
+    }
+};
+
+pub TProgram: Program = {
+    "class" "Program" "{" <f: TFieldDecl*> <m: TMethodDecl*> "}" 
+    	=> Program{
+	    field_decls:f,
+	    method_decls:m,
     }
 };
 
 TVarDecl: VarDecl = 
-    <t:TType> <i:Comma<TIdentifier>> => VarDecl{type_: t, identifiers:i};
-
+    <t:TType> <i:CommaAtLeast<TIdentifier>> ";" => VarDecl{type_: t, identifiers:i};
 
 TStatement: Statement = {
     <l: TLocation> <a:TAssignOp> <e:TExpr> ";" => Statement::Assign{dst:l, op: a, val: e},
@@ -25,7 +50,7 @@ TStatement: Statement = {
          => Statement::IfElse{cond:c, true_block: tb, false_block: Some(fb)},
     "for" <i:TIdentifier> "=" <s:TExpr> "," <e:TExpr> <b:TBlock>
         => Statement::Loop{index_var:i, start:s, end:e, block:b },
-    "return" <r:TExpr?> => Statement::Return{val: r},
+    "return" <r:TExpr?> ";" => Statement::Return{val: r},
     "break" ";" => Statement::Break,
     "continue" ";" => Statement::Continue,
     <b:TBlock> => Statement::Block(b),
@@ -40,17 +65,13 @@ TLocation: Location = {
     <i:TIdentifier> "[" <a:TExpr> "]" => Location{name: i, arr_size: a},
 };
 
-TFieldDecl: FieldDecl = {
-    <t:TType> <l:Comma<TLocation>> => FieldDecl{ type_: t, loc: l},
+TFieldDecl0: FieldDecl0 = {
+    <i: TIdentifier> => FieldDecl0{name: i, arr_size: 1},
+    <i: TIdentifier> "[" <n:TIntLiteral> "]" => FieldDecl0{name: i, arr_size: n},
 };
 
-
-pub TProgram: Program = {
-    "class" "Program" "{" <f: TFieldDecl*> <m: TMethodDecl*> "}" 
-    	=> Program{
-	    field_decls:f,
-	    method_decls:m,
-    }
+TFieldDecl: FieldDecl = {
+    <t:TType> <l:CommaAtLeast<TFieldDecl0>> ";" => FieldDecl{ type_: t, loc: l},
 };
 
 TMethodName: MethodName = <s:TIdentifier> => s;
@@ -61,11 +82,12 @@ TExpr0: Expr = {
     <l: TLocation> => Box::new(Expr0::Location(l)),
     <l: TMethodCall> => Box::new(Expr0::MethodCall(l)),
     <l: TLiteral> => Box::new(Expr0::Literal(l)),
-    "-" <l: TExpr1> => Box::new(Expr0::Unary(Unary{expr:l, op:UnaryOp::NegInt})),
+    "(" <l: TExpr> ")" => l,
+    "-" <l: TExpr0> => Box::new(Expr0::Unary(Unary{expr:l, op:UnaryOp::NegInt})),
 };
 
 TExpr1: Expr = {
-    "!" <l: TExpr1> => Box::new(Expr0::Unary(Unary{expr:l, op:UnaryOp::NegBool})),
+    "!" <l: TExpr0> => Box::new(Expr0::Unary(Unary{expr:l, op:UnaryOp::NegBool})),
     TExpr0,
 };
 
@@ -101,7 +123,6 @@ TExpr7: Expr = {
     TExpr6,
 };
 TExpr: Expr = {
-    "(" <l: TExpr> ")" => l,
     TExpr7,
 };
 
@@ -143,7 +164,7 @@ TAssignOp: AssignOp = {
 
 TType: Type = {
     "int" =>  Type::Int,
-    "bool" => Type::Bool,
+    "boolean" => Type::Bool,
 };
 
 TArithOp: ArithOp ={
@@ -153,7 +174,6 @@ TArithOp: ArithOp ={
     "/" =>    ArithOp::Div,
     "%" =>    ArithOp::Mod,
 };
-
 
 TCompareOp: CompareOp = {
     "<" =>   CompareOp::LT,
@@ -200,14 +220,16 @@ TMethodArg: MethodArg = {
 };
 
 TMethodDecl: MethodDecl = {
-    <r:TType> <name:TIdentifier> "(" <args:Comma<TMethodArg>> ")" => MethodDecl{
+    <r:TType> <name:TIdentifier> "(" <args:Comma<TMethodArg>> ")" <b:TBlock> => MethodDecl{
         return_type: r, 
         name: name,
         args: args,
+        block: b,
     },
-    "void" <name:TIdentifier> "(" <args:Comma<TMethodArg>> ")" => MethodDecl{
+    "void" <name:TIdentifier> "(" <args:Comma<TMethodArg>> ")" <b:TBlock> => MethodDecl{
         return_type: Type::Void, 
         name: name,
         args: args,
+        block: b,
     },
 };
