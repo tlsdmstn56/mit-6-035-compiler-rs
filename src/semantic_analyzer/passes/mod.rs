@@ -1,9 +1,10 @@
+use crate::token::*;
+
 pub enum SemanticCheckError {
     
     NoMainMethod,         // pass 3
     NonPositiveArraySize, // pass 4
 }
-use crate::ast::*;
 
 // 1. 	 No identifier is declared twice in the same scope. 
 // 2. 	 No identifier is used before it is declared. 

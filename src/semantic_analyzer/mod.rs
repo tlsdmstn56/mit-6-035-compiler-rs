@@ -1,7 +1,7 @@
 mod passes;
 mod ir;
 
-use crate::ast::Program;
+use crate::token::Program;
 use passes::*;
 
 

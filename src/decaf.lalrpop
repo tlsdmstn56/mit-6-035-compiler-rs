@@ -1,5 +1,5 @@
 use std::str::FromStr;
-use crate::ast::*;
+use crate::token::*;
 
 grammar; match {
     r"//[^\n\r]*[\n\r]*" => { }, // Ignore C++-style comments
