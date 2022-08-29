@@ -1,4 +1,5 @@
 mod passes;
+mod ir;
 
 use crate::ast::Program;
 use passes::*;
@@ -14,9 +15,10 @@ impl SemanticAnalyzer {
         SemanticAnalyzer{}
     }
     pub fn check(&self, p: &Program) -> Result<(), Vec<SemanticCheckError>> {
-        let passes = vec![
-            has_main   
-        ];
+        let passes = Vec::from([
+            /* pass 3 */ has_main, 
+            /* pass 4 */ is_array_size_positive,
+        ]);
         let errors: Vec<SemanticCheckError> = passes.iter()
                 .map(|&pass| pass(p))
                 .filter(|res| res.is_err())

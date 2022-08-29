@@ -1,5 +1,7 @@
 pub enum SemanticCheckError {
-    NoMainMethod,
+    
+    NoMainMethod,         // pass 3
+    NonPositiveArraySize, // pass 4
 }
 use crate::ast::*;
 
@@ -18,6 +20,13 @@ pub fn has_main(p: &Program) -> Result<(),SemanticCheckError> {
 }
 
 // 4. 	 The <int literal> in an array declaration must be greater than 0. 
+pub fn is_array_size_positive(p: &Program) -> Result<(), SemanticCheckError> {
+    // FieldDecl: loop over all fields and check array size
+    let is_valid = p.field_decls.iter().map(
+            |d| d.loc.iter().map(|a| a.arr_size > 0).fold(true, |a, b| a && b)
+        ).fold(true, |a, b| a&& b);
+    if is_valid { Ok(()) } else { Err(SemanticCheckError::NonPositiveArraySize)}
+}
 // 5. 	 The number and types of arguments in a method call must be the same as the number and types of the formals, i.e., the signatures must be identical. 
 // 6. 	 If a method call is used as an expression, the method must return a result. 
 // 7. 	 A return statement must not have a return value unless it appears in the body of a method that is declared to return a value. 
