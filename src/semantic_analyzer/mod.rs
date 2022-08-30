@@ -3,8 +3,7 @@ mod ir;
 
 use crate::token::Program;
 use passes::*;
-
-
+use ir::{IRRoot, ProgramClassDecl};
 
 pub struct SemanticAnalyzer {
     
@@ -14,7 +13,23 @@ impl SemanticAnalyzer {
     pub fn new() -> Self {
         SemanticAnalyzer{}
     }
-    pub fn check(&self, p: &Program) -> Result<(), Vec<SemanticCheckError>> {
+    pub fn create_ir(&self, p: &Program) -> Result<IRRoot, Vec<SemanticCheckError>> {
+        if let Err(errors) = self.pre_ir_check(p) {
+            return Err(errors);
+        }
+        let ir = match self.construct_ir(p) {
+            Err(errors) => return Err(errors),
+            Ok(ir) => ir,
+        };
+        if let Err(errors) = self.post_ir_check(&ir) {
+            return Err(errors);
+        }
+        Ok(ir)
+    }
+    fn construct_ir(&self, p: &Program) -> Result<IRRoot, Vec<SemanticCheckError>>  {
+        Ok(IRRoot{root: ProgramClassDecl{field_decls: Vec::new(), method_decls: Vec::new()}})
+    }
+    fn pre_ir_check(&self, p: &Program) -> Result<(), Vec<SemanticCheckError>> {
         let passes = Vec::from([
             /* pass 3 */ has_main, 
             /* pass 4 */ is_array_size_positive,
@@ -29,6 +44,17 @@ impl SemanticAnalyzer {
         } else {
             Err(errors)
         }
+    }
+    fn post_ir_check(&self, p: &IRRoot) -> Result<(), Vec<SemanticCheckError>> {
+        let passes = Vec::from([
+            |p: &IRRoot| -> Result<(), SemanticCheckError> { Ok(()) }
+        ]);
+        let errors: Vec<SemanticCheckError> = passes.iter()
+                .map(|&pass| pass(p))
+                .filter(|res| res.is_err())
+                .map(|res| res.err().unwrap())
+                .collect();
+        if errors.len() == 0 { Ok(()) } else { Err(errors) }
     }
 }
 
@@ -51,7 +77,7 @@ macro_rules! test_sa_illegal {
                     .collect();
             let s = read_to_string(&path).unwrap();
             let program = DecafParser::new().parse(&s).unwrap();
-            let res = SemanticAnalyzer::new().check(&program);
+            let res = SemanticAnalyzer::new().create_ir(&program);
             assert!(res.is_err());
             
         }
@@ -68,7 +94,7 @@ macro_rules! test_sa_legal {
                     .collect();
             let s = read_to_string(&path).unwrap();
             let program = DecafParser::new().parse(&s).unwrap();
-            let res = SemanticAnalyzer::new().check(&program);
+            let res = SemanticAnalyzer::new().create_ir(&program);
             assert!(res.is_ok());
         }
     };
