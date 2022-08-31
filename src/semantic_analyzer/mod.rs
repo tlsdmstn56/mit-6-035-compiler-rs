@@ -1,35 +1,78 @@
 mod passes;
 mod ir;
+mod env;
 
-use crate::token::Program;
+use crate::token;
 use passes::*;
-use ir::{IRRoot, ProgramClassDecl};
+use env::{Env, EnvStack};
+use std::rc::Rc;
+use std::cell::RefCell;
 
 pub struct SemanticAnalyzer {
-    
+    pub envs: EnvStack,
+}
+
+fn create_rc<T>(x: T) -> Rc<RefCell<T>> {
+    Rc::new(RefCell::new(x))
 }
 
 impl SemanticAnalyzer {    
     pub fn new() -> Self {
-        SemanticAnalyzer{}
+        Self { 
+            envs: EnvStack::new(),
+        }
     }
-    pub fn create_ir(&self, p: &Program) -> Result<IRRoot, Vec<SemanticCheckError>> {
-        if let Err(errors) = self.pre_ir_check(p) {
+    pub fn create_ir(&mut self, p: token::Program) -> Result<ir::IRRoot, Vec<SemanticCheckError>> {
+        if let Err(errors) = self.pre_ir_check(&p) {
             return Err(errors);
         }
-        let ir = match self.construct_ir(p) {
+        let root = match self.construct_ir(p) {
             Err(errors) => return Err(errors),
-            Ok(ir) => ir,
+            Ok(root) => root,
         };
-        if let Err(errors) = self.post_ir_check(&ir) {
+        if let Err(errors) = self.post_ir_check(&root) {
             return Err(errors);
         }
-        Ok(ir)
+        Ok(root)
     }
-    fn construct_ir(&self, p: &Program) -> Result<IRRoot, Vec<SemanticCheckError>>  {
-        Ok(IRRoot{root: ProgramClassDecl{field_decls: Vec::new(), method_decls: Vec::new()}})
+    
+    fn get_ir_field_decls(&mut self, decls: Vec<token::FieldDecl>) -> Vec<ir::FieldDecl> {
+        let mut res: Vec<ir::FieldDecl> = Vec::new();
+        let mut global_env = Env::new();
+        for field_decls in decls {
+            for field_decl in field_decls.loc {
+                let t = ir::Type::from(&field_decls.type_);
+                let name = field_decl.name;
+                let arr_size = field_decl.arr_size.clone();
+                let d = ir::FieldDecl0{
+                    r#type: t, 
+                    name: name, 
+                    arr_size: arr_size,
+                };
+                let d = create_rc(d);
+                global_env.add_field(&d);
+                res.push(d);
+            }
+        }
+        self.envs.add_env(global_env);
+        res
     }
-    fn pre_ir_check(&self, p: &Program) -> Result<(), Vec<SemanticCheckError>> {
+    fn get_ir_method_decls(&mut self, decls: Vec<token::MethodDecl>) -> Vec<ir::MethodDecl> {
+        Vec::new()
+    }
+
+    fn construct_ir(&mut self, p: token::Program) -> Result<ir::IRRoot, Vec<SemanticCheckError>>  {
+        let field_decls = self.get_ir_field_decls(p.field_decls);
+        let method_decls = self.get_ir_method_decls(p.method_decls);
+        let program_decl = 
+            ir::ProgramClassDecl {
+                field_decls: field_decls, 
+                method_decls: method_decls,
+            };
+        let root = ir::IRRoot{root: program_decl};
+        Ok(root)
+    }
+    fn pre_ir_check(&self, p: &token::Program) -> Result<(), Vec<SemanticCheckError>> {
         let passes = Vec::from([
             /* pass 3 */ has_main, 
             /* pass 4 */ is_array_size_positive,
@@ -45,9 +88,9 @@ impl SemanticAnalyzer {
             Err(errors)
         }
     }
-    fn post_ir_check(&self, p: &IRRoot) -> Result<(), Vec<SemanticCheckError>> {
+    fn post_ir_check(&self, p: &ir::IRRoot) -> Result<(), Vec<SemanticCheckError>> {
         let passes = Vec::from([
-            |p: &IRRoot| -> Result<(), SemanticCheckError> { Ok(()) }
+            |p: &ir::IRRoot| -> Result<(), SemanticCheckError> { Ok(()) }
         ]);
         let errors: Vec<SemanticCheckError> = passes.iter()
                 .map(|&pass| pass(p))
@@ -77,7 +120,7 @@ macro_rules! test_sa_illegal {
                     .collect();
             let s = read_to_string(&path).unwrap();
             let program = DecafParser::new().parse(&s).unwrap();
-            let res = SemanticAnalyzer::new().create_ir(&program);
+            let res = SemanticAnalyzer::new().create_ir(program);
             assert!(res.is_err());
             
         }
@@ -94,7 +137,7 @@ macro_rules! test_sa_legal {
                     .collect();
             let s = read_to_string(&path).unwrap();
             let program = DecafParser::new().parse(&s).unwrap();
-            let res = SemanticAnalyzer::new().create_ir(&program);
+            let res = SemanticAnalyzer::new().create_ir(program);
             assert!(res.is_ok());
         }
     };

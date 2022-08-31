@@ -83,7 +83,7 @@ pub enum BinaryOp {
     Cond(CondOp),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum AssignOp {
     Assign,
     AddAssign,
@@ -92,14 +92,14 @@ pub enum AssignOp {
     DivAssign,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Type {
     Int, 
     Bool,
     Void,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ArithOp {
     Add, 
     Sub,
@@ -108,7 +108,7 @@ pub enum ArithOp {
     Mod,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum CompareOp {
    GT,
    GE,
@@ -116,13 +116,13 @@ pub enum CompareOp {
    LE,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum EqOp {
    EQ,
    NE,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum CondOp {
    Or,
    And,
@@ -133,7 +133,7 @@ pub type IntLiteral = i32;
 pub type DecimalLiteral = i32;
 pub type HexLiteral = i32;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum BoolLiteral {
     True,
     False, 
@@ -148,7 +148,7 @@ pub struct Binary {
     pub op : BinaryOp,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum UnaryOp {
     NegInt,
     NegBool,
@@ -189,8 +189,5 @@ pub enum MethodCall {
         args: Vec<CalloutArg>,
     },
 }
-
-
-
 
 
