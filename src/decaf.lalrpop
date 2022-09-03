@@ -43,14 +43,12 @@ TVarDecl: VarDecl =
     <t:TType> <i:CommaAtLeast<TIdentifier>> ";" => VarDecl{type_: t, identifiers:i};
 
 TStatement: Statement = {
-    <l: TLocation> <a:TAssignOp> <e:TExpr> ";" => Statement::Assign{dst:l, op: a, val: e},
+    <l: TLocation> <a:TAssignOp> <e:TExpr> ";" => Statement::Assign(Assign{dst:l, op: a, val: e}),
     <m: TMethodCall> ";" => Statement::MethodCall(m),
-    "if" "(" <c:TExpr> ")" <tb:TBlock> => Statement::IfElse{cond:c, true_block: tb, false_block: None},
-    "if" "(" <c:TExpr> ")" <tb:TBlock> "else" <fb:TBlock> 
-         => Statement::IfElse{cond:c, true_block: tb, false_block: Some(fb)},
-    "for" <i:TIdentifier> "=" <s:TExpr> "," <e:TExpr> <b:TBlock>
-        => Statement::Loop{index_var:i, start:s, end:e, block:b },
-    "return" <r:TExpr?> ";" => Statement::Return{val: r},
+    "if" "(" <c:TExpr> ")" <tb:TBlock> => Statement::IfElse(IfElse{cond:c, true_block: tb, false_block: None}),
+    "if" "(" <c:TExpr> ")" <tb:TBlock> "else" <fb:TBlock> => Statement::IfElse(IfElse{cond:c, true_block: tb, false_block: Some(fb)}),
+    "for" <i:TIdentifier> "=" <s:TExpr> "," <e:TExpr> <b:TBlock> => Statement::Loop(Loop{index_var:i, start:s, end:e, block:b }),
+    "return" <r:TExpr?> ";" => Statement::Return(Return{val: r}),
     "break" ";" => Statement::Break,
     "continue" ";" => Statement::Continue,
     <b:TBlock> => Statement::Block(b),
@@ -61,8 +59,8 @@ TBlock: Block =
 
 
 TLocation: Location = {
-    <i:TIdentifier> => Location{name: i, arr_size: Box::new(Expr0::Literal(Literal::Int(1)))},
-    <i:TIdentifier> "[" <a:TExpr> "]" => Location{name: i, arr_size: a},
+    <i:TIdentifier> => Location{name: i, arr_size: None},
+    <i:TIdentifier> "[" <a:TExpr> "]" => Location{name: i, arr_size: Some(a)},
 };
 
 TFieldDecl0: FieldDecl0 = {

@@ -17,21 +17,46 @@ pub struct Block {
 }
 
 #[derive(Debug)]
+pub struct Assign {
+    pub dst: Location,
+    pub op: AssignOp,
+    pub val: Expr,
+}
+#[derive(Debug)]
+pub struct IfElse {
+    pub cond: Expr,
+    pub true_block: Block,
+    pub false_block: Option<Block>,
+}
+#[derive(Debug)]
+pub struct Loop {
+    pub index_var: Identifier,
+    pub start: Expr,
+    pub end: Expr,
+    pub block: Block,
+}
+
+#[derive(Debug)]
+pub struct Return {
+    pub val: Option<Expr>,
+}
+
+#[derive(Debug)]
 pub enum Statement {
-    Assign{dst:Location, op: AssignOp, val: Expr},
+    Assign(Assign),
     MethodCall(MethodCall),
-    IfElse{cond:Expr, true_block: Block, false_block: Option<Block>},
-    Loop{index_var: Identifier, start: Expr, end: Expr, block: Block},
-    Return{ val: Option<Expr> },
+    IfElse(IfElse),
+    Loop(Loop),
+    Return(Return),
     Break,
     Continue,
-    Block(Block)
+    Block(Block),
 }
 
 #[derive(Debug)]
 pub struct Location {
     pub name: String,
-    pub arr_size: Expr,
+    pub arr_size: Option<Expr>,
 }
 
 #[derive(Debug)]
@@ -59,7 +84,6 @@ pub struct Program {
     pub field_decls: Vec<FieldDecl>,
     pub method_decls: Vec<MethodDecl>,
 }
-
 
 pub type MethodName = String;
 pub type Alphabet = char;
@@ -94,14 +118,14 @@ pub enum AssignOp {
 
 #[derive(Debug, Clone)]
 pub enum Type {
-    Int, 
+    Int,
     Bool,
     Void,
 }
 
 #[derive(Debug, Clone)]
 pub enum ArithOp {
-    Add, 
+    Add,
     Sub,
     Mul,
     Div,
@@ -110,24 +134,23 @@ pub enum ArithOp {
 
 #[derive(Debug, Clone)]
 pub enum CompareOp {
-   GT,
-   GE,
-   LT,
-   LE,
+    GT,
+    GE,
+    LT,
+    LE,
 }
 
 #[derive(Debug, Clone)]
 pub enum EqOp {
-   EQ,
-   NE,
+    EQ,
+    NE,
 }
 
 #[derive(Debug, Clone)]
 pub enum CondOp {
-   Or,
-   And,
+    Or,
+    And,
 }
-
 
 pub type IntLiteral = i32;
 pub type DecimalLiteral = i32;
@@ -136,16 +159,16 @@ pub type HexLiteral = i32;
 #[derive(Debug, Clone)]
 pub enum BoolLiteral {
     True,
-    False, 
+    False,
 }
 pub type CharLiteral = char;
 pub type StringLiteral = String;
 
 #[derive(Debug)]
 pub struct Binary {
-    pub lhs : Expr,
-    pub rhs : Expr,
-    pub op : BinaryOp,
+    pub lhs: Expr,
+    pub rhs: Expr,
+    pub op: BinaryOp,
 }
 
 #[derive(Debug, Clone)]
@@ -177,17 +200,14 @@ pub enum CalloutArg {
     StringLiteral(StringLiteral),
 }
 
-
 #[derive(Debug)]
 pub enum MethodCall {
-    Method{
+    Method {
         name: MethodName,
         args: Vec<Expr>,
     },
-    Callout{
+    Callout {
         name: StringLiteral,
         args: Vec<CalloutArg>,
     },
 }
-
-

@@ -1,9 +1,82 @@
 use std::collections::HashMap;
-use super::ir::{FieldDecl, VarDecl, MethodDecl};
+use super::ir::{
+    For, IfElse, VarDecl, MethodDecl};
+use std::rc::Rc;
+use std::cell::RefCell;
+use std::mem::{discriminant};
 
-enum LocationDecl {
-    Field(FieldDecl),
-    Var(VarDecl),
+#[derive(Debug, Clone)]
+pub enum EnvType {
+    Global,
+    Anon,  
+    Method(MethodDecl),
+    For(For),
+    If(IfElse),
+    Else(IfElse),
+    NoEnv,
+}
+
+pub enum EnvError {
+    DuplicatedMethod(MethodDecl),
+    DuplicatedVar(VarDecl),
+}
+
+
+struct Env {
+    pub type_: EnvType,    
+    pub table:HashMap<String, VarDecl>,
+}
+
+impl Env {
+    pub fn new(t: EnvType) -> Self {
+        Self {
+            type_: t,
+            table: HashMap::new(),
+        }
+    }
+}
+
+/// Env RAII
+pub struct EnvContext {
+    envs: Rc<RefCell<EnvStack>>,
+    t: EnvType,
+}
+
+impl Drop for EnvContext{
+    fn drop(&mut self) {
+        let desc = discriminant(&self.t);
+        let noenv_desc = discriminant(&EnvType::NoEnv);
+        if desc != noenv_desc {
+            self.envs.borrow_mut().pop();
+        }
+    }
+}
+
+impl EnvContext {
+    pub fn new(envs: Rc<RefCell<EnvStack>>, t: EnvType) -> Self {
+        let desc = discriminant(&t);
+        let noenv_desc = discriminant(&EnvType::NoEnv);
+        if desc != noenv_desc {
+            envs.borrow_mut().push(t.clone());
+        }
+        Self {
+            envs:envs,
+            t: t,
+        }
+    }
+     
+    /// Add a new var declation in current env
+    pub fn add_var(&self, f: &VarDecl) -> Result<(), EnvError>  {
+        self.envs.borrow_mut().add_var(f)
+    }
+
+    /// Add a new method 
+    pub fn add_method(&self, m: &MethodDecl) -> Result<(), EnvError> {
+        self.envs.borrow_mut().add_method(m)
+    }
+    pub fn find_var_decl(&self, name: &String) -> Option<VarDecl> {
+        self.envs.borrow().find_var_decl(name)
+    }
 }
 
 pub struct EnvStack {
@@ -18,26 +91,47 @@ impl EnvStack {
             envs: Vec::new()
         }
     }
-    pub fn add_env(&mut self, e: Env) {
-        self.envs.push(e);
+
+    /// Push Env
+    /// 
+    /// This usually means being into a new scope
+    pub fn push(&mut self, t: EnvType) {
+        self.envs.push(Env::new(t));
     }
-}
-
-pub struct Env {
-    decls: HashMap<String, LocationDecl>,
-}
-
-impl Env {
-    pub fn new() -> Self {
-        Self {
-            decls: HashMap::new(),
+    /// Pop Env
+    /// 
+    /// This usually means getting out of a scope
+    pub fn pop(&mut self) /* -> Env*/ {
+        self.envs.pop(); // .unwrap()
+    }
+     
+    /// Add a new var declation in current env
+    pub fn add_var(&mut self, f: &VarDecl) -> Result<(), EnvError>  {
+        let val = f.clone();
+        let res = self.envs.last_mut().unwrap().table.insert(f.borrow().name.clone(), val);
+        match res {
+            Some(d) => Err(EnvError::DuplicatedVar(d)),
+            None => Ok(())
         }
     }
 
-    pub fn add_field(&mut self, f: &FieldDecl) {
-        let borrowed = f.borrow();
-        let val = LocationDecl::Field(f.clone());
-        self.decls.insert(borrowed.name.clone(), val);
+    /// Add a new method 
+    pub fn add_method(&mut self, m: &MethodDecl) -> Result<(), EnvError> {
+        let res = self.methods.insert(m.borrow().name.clone(), m.clone());
+        match res {
+            Some(dup_decl) => Err(EnvError::DuplicatedMethod(dup_decl)),
+            None => Ok(())
+        }
+    }
+
+    pub fn find_var_decl(&self, name: &String) -> Option<VarDecl> {
+        for env in self.envs.iter().rev() {
+            match env.table.get(name) {
+                Some(d) => return Some(d.clone()),
+                None => (),
+            }
+        }
+        None
     }
 }
 

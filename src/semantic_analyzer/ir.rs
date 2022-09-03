@@ -8,36 +8,32 @@ pub struct Block {
     pub statements: Vec<Statement>,
 }
 
-#[derive(Debug)]
-pub enum LocationDecl {
-    Var(VarDecl),
-    Field(FieldDecl),
-}
 
 #[derive(Debug)]
 pub struct Location {
-    pub decl: LocationDecl,
+    pub decl: VarDecl,
     pub arr_size: Option<Expr>,
 }
 
 #[derive(Debug)]
-pub struct Assign {dst:Location, op: AssignOp, val: Expr}
+pub struct Assign {pub dst:Location, pub op: AssignOp, pub val: Expr}
 
 #[derive(Debug)]
-pub struct IfElse {cond:Expr, true_block: Block, false_block: Option<Block>}
+pub struct IfElse0 {pub cond:Expr, pub true_block: Block, pub false_block: Option<Block>}
+pub type IfElse = Rc<RefCell<IfElse0>>;
 
 #[derive(Debug)]
-pub struct For0{index_var: Identifier, start: Expr, end: Expr, block: Block}
+pub struct For0{pub index_var: Identifier, pub start: Expr, pub end: Expr, pub block: Block}
 pub type For = Rc<RefCell<For0>>;
 
 #[derive(Debug)]
-pub struct Return { func: MethodDecl, val: Option<Expr> }
+pub struct Return { pub func: MethodDecl, pub val: Option<Expr> }
 
 #[derive(Debug)]
-pub struct Break { r#for: For }
+pub struct Break { pub r#for: For }
 
 #[derive(Debug)]
-pub struct Continue { r#for: For }
+pub struct Continue { pub r#for: For }
 
 #[derive(Debug)]
 pub enum AssignOp {
@@ -46,6 +42,18 @@ pub enum AssignOp {
     SubAssign,
     MulAssign,
     DivAssign,
+}
+
+impl AssignOp {
+    pub fn from(t: token::AssignOp) -> Self {
+        match t {
+        token::AssignOp::Assign    => Self::Assign,   
+        token::AssignOp::AddAssign => Self::AddAssign,
+        token::AssignOp::SubAssign => Self::SubAssign,
+        token::AssignOp::MulAssign => Self::MulAssign,
+        token::AssignOp::DivAssign => Self::DivAssign,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -129,6 +137,7 @@ pub type Expr = Rc<RefCell<Expr0>>;
 
 #[derive(Debug)]
 pub enum Expr0 {
+    Location(Location),
     Literal(Literal),
     Call(Call),
     Unary(Unary),
@@ -149,14 +158,6 @@ pub enum Statement0 {
     Block(Block)
 }
 
-pub type FieldDecl = Rc<RefCell<FieldDecl0>>;
-
-#[derive(Debug)]
-pub struct FieldDecl0 {
-    pub r#type: Type,
-    pub name: String,
-    pub arr_size: i32,
-}
 
 pub type MethodDecl = Rc<RefCell<MethodDecl0>>;
 #[derive(Debug)]
@@ -165,28 +166,31 @@ pub struct MethodArg {
     pub name: Identifier,
 }
 
+
 #[derive(Debug)]
 pub struct MethodDecl0 {
     pub return_type: Type,
     pub name: Identifier,
     pub args: Vec<MethodArg>,
-    pub block: Block,
+    pub block: Option<Block>,
 }
+
 pub type VarDecl = Rc<RefCell<VarDecl0>>;
 #[derive(Debug)]
 pub struct VarDecl0 {
     pub r#type: Type,
-    pub identifiers: Vec<Identifier>,
+    pub name: Identifier,
+    pub arr_size: i32,
 }
 #[derive(Debug)]
 pub enum MemberDecl {
-    FieldDecl(FieldDecl),
+    FieldDecl(VarDecl),
     MethodDecl(MethodDecl),
 }
 
 #[derive(Debug)]
 pub struct ProgramClassDecl {
-    pub field_decls: Vec<FieldDecl>,
+    pub field_decls: Vec<VarDecl>,
     pub method_decls: Vec<MethodDecl>,
 }
 
