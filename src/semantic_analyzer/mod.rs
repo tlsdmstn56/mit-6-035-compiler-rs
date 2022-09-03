@@ -16,6 +16,37 @@ fn create_rc<T>(x: T) -> Rc<RefCell<T>> {
     Rc::new(RefCell::new(x))
 }
 
+
+fn get_ir_expr_type(e: &ir::ExprType) -> Result<ir::Type, SemanticCheckError> {
+    match e {
+        ir::ExprType::Location(e) => {
+            Ok(e.decl.borrow().type_.clone())
+        },
+        ir::ExprType::Literal(e) => {
+            match e {
+                ir::Literal::Int(_)     => Ok(ir::Type::Int),
+                ir::Literal::Boolean(_) => Ok(ir::Type::Bool),
+            }
+        },
+        ir::ExprType::Call(e) => {
+            match e {
+                ir::Call::Method(m) => {
+                    match m.decl.borrow().return_type {
+                        ir::Type::Void => Err(SemanticCheckError::ExprCallNoReturn),
+                        t @ _ => Ok(t),
+                    }
+                },
+                ir::Call::Callout(_) => Ok(ir::Type::Int),
+            }
+        },
+        ir::ExprType::Unary(e) => Ok(e.expr.borrow().type_),
+        ir::ExprType::Binary(e) => {
+            assert!(e.lhs.borrow().type_ == e.rhs.borrow().type_);
+            Ok(e.lhs.borrow().type_)
+        },
+    }
+}
+
 impl SemanticAnalyzer {
     pub fn new() -> Self {
         Self {
@@ -49,7 +80,7 @@ impl SemanticAnalyzer {
                 let name = field_decl.name;
                 let arr_size = field_decl.arr_size.clone();
                 let d = ir::VarDecl0 {
-                    r#type: t,
+                    type_: t,
                     name: name,
                     arr_size: arr_size,
                 };
@@ -71,7 +102,7 @@ impl SemanticAnalyzer {
 
     fn get_ir_method_arg(&self, t: &token::MethodArg) -> ir::MethodArg {
         ir::MethodArg {
-            r#type: ir::Type::from(&t.type_),
+            type_: ir::Type::from(&t.type_),
             name: t.name.clone(),
         }
     }
@@ -86,9 +117,9 @@ impl SemanticAnalyzer {
             for name in decls.identifiers {
                 let t = ir::Type::from(&decls.type_);
                 let d = ir::VarDecl0 {
-                    r#type: t,
+                    type_: t,
                     name: name,
-                    arr_size: 1,
+                    arr_size: None,
                 };
                 let d = create_rc(d);
                 if let Err(_) = env_ctx.add_var(&d) {
@@ -113,11 +144,28 @@ impl SemanticAnalyzer {
         if var_decl.is_none() {
             errors.push(SemanticCheckError::UnknownSymbol(t.name));
         }
+        let var_decl = var_decl.unwrap();
         
         let offset = match t.arr_size {
             Some(i) => 
                 match self.get_ir_expr(i) {
-                    Ok(i) => Some(i),
+                    Ok(i) => {
+                        let type_ = i.borrow().type_;
+                        let arr_size = &var_decl.borrow().arr_size;
+                        if type_ == ir::Type::Int && arr_size.is_some() {
+                            Some(i)
+                        }
+                        else {
+                            if arr_size.is_some() {
+                                errors.push(SemanticCheckError::ArrayLocationOnNonArrayVar);
+                            }
+                            if type_ != ir::Type::Int {
+                                errors.push(SemanticCheckError::ArrayLocationOffsetTypeError);
+                            }
+                            None
+                        }
+
+                    },
                     Err(e) => {
                         errors.extend(e);
                         None
@@ -127,7 +175,7 @@ impl SemanticAnalyzer {
         };
         if errors.is_empty() {
             Ok(ir::Location{
-                decl: var_decl.unwrap(), 
+                decl: var_decl, 
                 arr_size: offset, 
             })
         } else {
@@ -155,34 +203,69 @@ impl SemanticAnalyzer {
         }
     }
     fn get_ir_unary(&self, t: token::Unary) -> Result<ir::Unary, Vec<SemanticCheckError>> {
-        todo!("get_ir_unary");
+        let expr = self.get_ir_expr(t.expr);
+        let expr = match expr {
+            Ok(e) => e,
+            Err(e) => return Err(e),
+        };
+        let type_ = expr.borrow().type_;
+        match t.op {
+            token::UnaryOp::NegInt if type_ == ir::Type::Int => {
+                Ok(ir::Unary{
+                    expr: expr, 
+                    op: ir::UnaryOp::NegInt,
+                })
+            },
+            token::UnaryOp::NegBool if type_ == ir::Type::Bool => {
+                Ok(ir::Unary{
+                    expr: expr, 
+                    op: ir::UnaryOp::NegBool,
+                })
+            },
+            _ => Err(vec![SemanticCheckError::TypeMismatch]),
+        }
     }
     fn get_ir_binary(&self, t: token::Binary) -> Result<ir::Binary, Vec<SemanticCheckError>> {
         todo!("get_ir_binary");
     }
+
+
     fn get_ir_expr(&self, t: token::Expr) -> Result<ir::Expr, Vec<SemanticCheckError>> {
-        match *t {
+        let expr_type = match *t {
             token::Expr0::Location(t) => match self.get_ir_location(t) {
-                Ok(a) => Ok(create_rc(ir::Expr0::Location(a))),
+                Ok(a) => Ok(ir::ExprType::Location(a)),
                 Err(e) => Err(e),
             },
             token::Expr0::MethodCall(t) => match self.get_ir_call(t) {
-                Ok(a) => Ok(create_rc(ir::Expr0::Call(a))),
+                Ok(a) => Ok(ir::ExprType::Call(a)),
                 Err(e) => Err(e),
             },
             token::Expr0::Literal(t) => match self.get_ir_literal(t) {
-                Ok(a) => Ok(create_rc(ir::Expr0::Literal(a))),
+                Ok(a) => Ok(ir::ExprType::Literal(a)),
                 Err(e) => Err(e),
             },
             token::Expr0::Unary(t) => match self.get_ir_unary(t) {
-                Ok(a) => Ok(create_rc(ir::Expr0::Unary(a))),
+                Ok(a) => Ok(ir::ExprType::Unary(a)),
                 Err(e) => Err(e),
             },
             token::Expr0::Binary(t) => match self.get_ir_binary(t) {
-                Ok(a) => Ok(create_rc(ir::Expr0::Binary(a))),
+                Ok(a) => Ok(ir::ExprType::Binary(a)),
                 Err(e) => Err(e),
             },
-        }
+        };
+        let expr_type = match expr_type {
+            Ok(e) => e, 
+            Err(e) => return Err(e),
+        };
+        let type_ = get_ir_expr_type(&expr_type);
+        let type_ = match type_ {
+            Ok(t) => t,
+            Err(e) => return Err(vec![e]),
+        };
+        Ok(create_rc(ir::Expr0{
+            type_: type_,
+            expr: expr_type,
+        }))
     }
 
     fn get_ir_assign(&self, t: token::Assign) -> Result<ir::Assign, Vec<SemanticCheckError>> {

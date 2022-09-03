@@ -62,7 +62,7 @@ pub struct Location {
 #[derive(Debug)]
 pub struct FieldDecl0 {
     pub name: String,
-    pub arr_size: i32,
+    pub arr_size: Option<i32>,
 }
 
 #[derive(Debug)]

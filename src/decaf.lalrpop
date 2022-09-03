@@ -64,8 +64,8 @@ TLocation: Location = {
 };
 
 TFieldDecl0: FieldDecl0 = {
-    <i: TIdentifier> => FieldDecl0{name: i, arr_size: 1},
-    <i: TIdentifier> "[" <n:TIntLiteral> "]" => FieldDecl0{name: i, arr_size: n},
+    <i: TIdentifier> => FieldDecl0{name: i, arr_size: None},
+    <i: TIdentifier> "[" <n:TIntLiteral> "]" => FieldDecl0{name: i, arr_size: Some(n)},
 };
 
 TFieldDecl: FieldDecl = {
