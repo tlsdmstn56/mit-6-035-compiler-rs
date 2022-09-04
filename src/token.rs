@@ -201,13 +201,21 @@ pub enum CalloutArg {
 }
 
 #[derive(Debug)]
+pub struct Method {
+    pub name: MethodName,
+    pub args: Vec<Expr>,
+}
+
+#[derive(Debug)]
+pub struct Callout {
+    pub name: StringLiteral,
+    pub args: Vec<CalloutArg>,
+}
+
+
+#[derive(Debug)]
 pub enum MethodCall {
-    Method {
-        name: MethodName,
-        args: Vec<Expr>,
-    },
-    Callout {
-        name: StringLiteral,
-        args: Vec<CalloutArg>,
-    },
+    Method (Method),
+    Callout (Callout),
+
 }

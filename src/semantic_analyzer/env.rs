@@ -77,6 +77,16 @@ impl EnvContext {
     pub fn find_var_decl(&self, name: &String) -> Option<VarDecl> {
         self.envs.borrow().find_var_decl(name)
     }
+    
+    pub fn get_current_scope_method_decl(&self) -> Option<MethodDecl> {
+        self.envs.borrow().get_current_scope_method_decl()
+    }
+    pub fn find_method_decl(&self, name: &String) -> Option<MethodDecl> {
+        self.envs.borrow().find_method_decl(name)
+    }
+    pub fn find_for(&self) -> Option<For> {
+        self.envs.borrow().find_for()
+    }
 }
 
 pub struct EnvStack {
@@ -124,11 +134,41 @@ impl EnvStack {
         }
     }
 
+    /// Find variable declation with given name in current scope 
     pub fn find_var_decl(&self, name: &String) -> Option<VarDecl> {
         for env in self.envs.iter().rev() {
             match env.table.get(name) {
                 Some(d) => return Some(d.clone()),
                 None => (),
+            }
+        }
+        None
+    }
+    
+    /// Find method declation in current scope
+    pub fn get_current_scope_method_decl(&self) -> Option<MethodDecl> {
+        for env in self.envs.iter().rev() {
+            match &env.type_ {
+                EnvType::Method(m) => return Some(m.clone()),
+                _ => () 
+            }
+        }
+        None
+    }
+    
+    /// Find method declation by method name
+    pub fn find_method_decl(&self, name: &String) -> Option<MethodDecl> {
+        match self.methods.get(name) {
+            Some(m) => Some(m.clone()),
+            None => None,
+        }
+    }
+    /// Find method declation in current scope
+    pub fn find_for(&self) -> Option<For> {
+        for env in self.envs.iter().rev() {
+            match &env.type_ {
+                EnvType::For(m) => return Some(m.clone()),
+                _ => () 
             }
         }
         None

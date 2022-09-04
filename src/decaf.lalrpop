@@ -132,18 +132,18 @@ TBinaryOp: BinaryOp = {
 };
 
 TMethodCall: MethodCall = {
-    <name: TMethodName> "(" <args: Comma<TExpr>> ")" => MethodCall::Method{
+    <name: TMethodName> "(" <args: Comma<TExpr>> ")" => MethodCall::Method(Method{
         name: name,
         args: args,
-    },
-    "callout" "(" <name: TStringLiteral> ")" => MethodCall::Callout{
+    }),
+    "callout" "(" <name: TStringLiteral> ")" => MethodCall::Callout(Callout{
         name: name,
         args: Vec::new(), 
-    },
-    "callout" "(" <name: TStringLiteral> "," <args: Comma<TCalloutArg>> ")" => MethodCall::Callout{
+    }),
+    "callout" "(" <name: TStringLiteral> "," <args: Comma<TCalloutArg>> ")" => MethodCall::Callout(Callout{
         name: name,
         args: args,
-    },
+    }),
 };
 
 TLiteral: Literal = {

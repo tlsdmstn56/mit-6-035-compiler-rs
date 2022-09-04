@@ -24,17 +24,17 @@ pub struct Assign {
 #[derive(Debug)]
 pub struct IfElse0 {
     pub cond: Expr,
-    pub true_block: Block,
+    pub true_block: Option<Block>,
     pub false_block: Option<Block>,
 }
 pub type IfElse = Rc<RefCell<IfElse0>>;
 
 #[derive(Debug)]
 pub struct For0 {
-    pub index_var: Identifier,
+    pub index_decl: VarDecl,
     pub start: Expr,
     pub end: Expr,
-    pub block: Block,
+    pub block: Option<Block>,
 }
 pub type For = Rc<RefCell<For0>>;
 
@@ -46,15 +46,15 @@ pub struct Return {
 
 #[derive(Debug)]
 pub struct Break {
-    pub r#for: For,
+    pub for_: For,
 }
 
 #[derive(Debug)]
 pub struct Continue {
-    pub r#for: For,
+    pub for_: For,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum AssignOp {
     Assign,
     AddAssign,
@@ -92,7 +92,7 @@ impl Type {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, PartialEq, Clone)]
 pub enum BinaryOp {
     Or,  // logical or
     And, // logical and
@@ -107,6 +107,54 @@ pub enum BinaryOp {
     Mul, // *
     Div, // /
     Mod, // %
+}
+
+impl BinaryOp {
+    pub fn get_return_type(&self) -> Type {
+        match self {
+            Self::Or  => Type::Bool,  // logical or
+            Self::And => Type::Bool, // logical and
+            Self::EQ  => Type::Bool,  // ==
+            Self::NE  => Type::Bool,  // !=
+            Self::GT  => Type::Bool,  // >
+            Self::LT  => Type::Bool,  // <
+            Self::GE  => Type::Bool,  // >=
+            Self::LE  => Type::Bool,  // <=
+            Self::Add => Type::Int, // +
+            Self::Sub => Type::Int, // -
+            Self::Mul => Type::Int, // *
+            Self::Div => Type::Int, // /
+            Self::Mod => Type::Int, // %
+        } 
+    }
+}
+
+impl BinaryOp {
+    pub fn from(t: &token::BinaryOp) -> Self {
+        match t {
+            token::BinaryOp::Arith(a) => match a {
+                token::ArithOp::Add => BinaryOp::Add,
+                token::ArithOp::Sub => BinaryOp::Sub,
+                token::ArithOp::Mul => BinaryOp::Mul,
+                token::ArithOp::Div => BinaryOp::Div,
+                token::ArithOp::Mod => BinaryOp::Mod,
+            },
+            token::BinaryOp::Compare(a) => match a {
+                token::CompareOp::GT => BinaryOp::GT,
+                token::CompareOp::GE => BinaryOp::GE,
+                token::CompareOp::LT => BinaryOp::LT,
+                token::CompareOp::LE => BinaryOp::LE,
+            },
+            token::BinaryOp::Eq(a) => match a {
+                token::EqOp::EQ => BinaryOp::EQ,
+                token::EqOp::NE => BinaryOp::NE,
+            },
+            token::BinaryOp::Cond(a) => match a {
+                token::CondOp::Or => BinaryOp::Or,
+                token::CondOp::And => BinaryOp::And,
+            },
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -188,17 +236,12 @@ pub enum Statement0 {
 }
 
 pub type MethodDecl = Rc<RefCell<MethodDecl0>>;
-#[derive(Debug)]
-pub struct MethodArg {
-    pub type_: Type,
-    pub name: Identifier,
-}
 
 #[derive(Debug)]
 pub struct MethodDecl0 {
     pub return_type: Type,
     pub name: Identifier,
-    pub args: Vec<MethodArg>,
+    pub args: Vec<VarDecl>,
     pub block: Option<Block>,
 }
 
@@ -209,6 +252,13 @@ pub struct VarDecl0 {
     pub name: Identifier,
     pub arr_size: Option<i32>,
 }
+
+impl VarDecl0 {
+    pub fn is_array(&self) -> bool {
+        self.arr_size.is_some()
+    }
+}
+
 #[derive(Debug)]
 pub enum MemberDecl {
     FieldDecl(VarDecl),
