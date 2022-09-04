@@ -20,7 +20,11 @@ macro_rules! check_type_or_early_return {
     ($e:expr, $expected_type:path) => {
         match $e.borrow().type_ {
             $expected_type => (),
-            _ => return Err(vec![SemanticCheckError::TypeMismatch(String::from("Early return"))]),
+            _ => {
+                return Err(vec![SemanticCheckError::TypeMismatch(String::from(
+                    "Early return",
+                ))])
+            }
         }
     };
 }
@@ -40,7 +44,7 @@ fn create_rc<T>(x: T) -> Rc<RefCell<T>> {
 
 fn get_ir_expr_type(e: &ir::ExprType) -> Result<ir::Type, SemanticCheckError> {
     match e {
-        ir::ExprType::Location(e) => Ok(e.decl.borrow().type_.clone()),
+        ir::ExprType::Location(e) => Ok(e.decl.borrow().type_),
         ir::ExprType::Literal(e) => match e {
             ir::Literal::Int(_) => Ok(ir::Type::Int),
             ir::Literal::Boolean(_) => Ok(ir::Type::Bool),
@@ -48,14 +52,12 @@ fn get_ir_expr_type(e: &ir::ExprType) -> Result<ir::Type, SemanticCheckError> {
         ir::ExprType::Call(e) => match e {
             ir::Call::Method(m) => match m.decl.borrow().return_type {
                 ir::Type::Void => Err(SemanticCheckError::ExprCallNoReturn),
-                t @ _ => Ok(t),
+                t => Ok(t),
             },
             ir::Call::Callout(_) => Ok(ir::Type::Int),
         },
         ir::ExprType::Unary(e) => Ok(e.expr.borrow().type_),
-        ir::ExprType::Binary(e) => {
-            Ok(e.op.get_return_type())
-        }
+        ir::ExprType::Binary(e) => Ok(e.op.get_return_type()),
     }
 }
 
@@ -83,14 +85,14 @@ impl SemanticAnalyzer {
             for field_decl in field_decls.loc {
                 let t = ir::Type::from(&field_decls.type_);
                 let name = field_decl.name;
-                let arr_size = field_decl.arr_size.clone();
+                let arr_size = field_decl.arr_size;
                 let d = ir::VarDecl0 {
                     type_: t,
-                    name: name,
-                    arr_size: arr_size,
+                    name,
+                    arr_size,
                 };
                 let d = create_rc(d);
-                if let Err(_) = env_ctx.add_var(&d) {
+                if env_ctx.add_var(&d).is_err() {
                     let e = SemanticCheckError::DuplicatedSymbol(d.borrow().name.clone());
                     errors.push(e);
                     continue;
@@ -124,11 +126,11 @@ impl SemanticAnalyzer {
                 let t = ir::Type::from(&decls.type_);
                 let d = ir::VarDecl0 {
                     type_: t,
-                    name: name,
+                    name,
                     arr_size: None,
                 };
                 let d = create_rc(d);
-                if let Err(_) = env_ctx.add_var(&d) {
+                if env_ctx.add_var(&d).is_err() {
                     let e = SemanticCheckError::DuplicatedSymbol(d.borrow().name.clone());
                     errors.push(e);
                     continue;
@@ -176,8 +178,10 @@ impl SemanticAnalyzer {
             },
             None if !var_decl.borrow().is_array() => None,
             _ => {
-                    errors.push(SemanticCheckError::TypeMismatch(String::from("location does not have offset, but delc is an array")));
-                    None
+                errors.push(SemanticCheckError::TypeMismatch(String::from(
+                    "location does not have offset, but delc is an array",
+                )));
+                None
             }
         };
         if errors.is_empty() {
@@ -202,7 +206,7 @@ impl SemanticAnalyzer {
             let expr = unwrap_or_early_return!(self.get_ir_expr(arg));
             args.push(expr);
         }
-        
+
         if args.len() != method_decl.borrow().args.len() {
             return_error!(MethodArgumentNotMatch);
         }
@@ -211,28 +215,24 @@ impl SemanticAnalyzer {
                 return_error!(MethodArgumentNotMatch);
             }
         }
-        Ok(ir::Method{
+        Ok(ir::Method {
             decl: method_decl,
-            args: args,
-        }) 
+            args,
+        })
     }
-
 
     fn get_ir_callout(&self, t: token::Callout) -> IRResult<ir::Callout> {
         let mut args = Vec::new();
         for targ in t.args {
-            let arg = match targ{
-                token::CalloutArg::Expr(e) => 
-                    ir::CalloutArg::Expr(unwrap_or_early_return!(self.get_ir_expr(e))),
-                token::CalloutArg::StringLiteral(s) => 
-                    ir::CalloutArg::StringLiteral(s),
+            let arg = match targ {
+                token::CalloutArg::Expr(e) => {
+                    ir::CalloutArg::Expr(unwrap_or_early_return!(self.get_ir_expr(e)))
+                }
+                token::CalloutArg::StringLiteral(s) => ir::CalloutArg::StringLiteral(s),
             };
             args.push(arg);
         }
-        Ok(ir::Callout {
-            name: t.name,
-            args: args,
-        })
+        Ok(ir::Callout { name: t.name, args })
     }
 
     fn get_ir_call(&self, t: token::MethodCall) -> IRResult<ir::Call> {
@@ -268,14 +268,16 @@ impl SemanticAnalyzer {
         let type_ = expr.borrow().type_;
         match t.op {
             token::UnaryOp::NegInt if type_ == ir::Type::Int => Ok(ir::Unary {
-                expr: expr,
+                expr,
                 op: ir::UnaryOp::NegInt,
             }),
             token::UnaryOp::NegBool if type_ == ir::Type::Bool => Ok(ir::Unary {
-                expr: expr,
+                expr,
                 op: ir::UnaryOp::NegBool,
             }),
-            _ => Err(vec![SemanticCheckError::TypeMismatch(String::from("unary op is not supported"))]),
+            _ => Err(vec![SemanticCheckError::TypeMismatch(String::from(
+                "unary op is not supported",
+            ))]),
         }
     }
     fn get_ir_binary(&self, t: token::Binary) -> IRResult<ir::Binary> {
@@ -303,7 +305,9 @@ impl SemanticAnalyzer {
         let rhs = rhs.unwrap();
 
         if lhs.borrow().type_ != rhs.borrow().type_ {
-            errors.push(SemanticCheckError::TypeMismatch(String::from("binary lhs rhs type is not matched")));
+            errors.push(SemanticCheckError::TypeMismatch(String::from(
+                "binary lhs rhs type is not matched",
+            )));
             return Err(errors);
         }
 
@@ -320,10 +324,7 @@ impl SemanticAnalyzer {
             | ir::BinaryOp::GE
             | ir::BinaryOp::LT
             | ir::BinaryOp::LE
-                if operand_type == ir::Type::Int =>
-            {
-                ()
-            }
+                if operand_type == ir::Type::Int => {}
             // 13. The operands of <eq op>s must have the same
             //     type, either int or boolean.
             ir::BinaryOp::EQ | ir::BinaryOp::NE => (),
@@ -333,19 +334,17 @@ impl SemanticAnalyzer {
 
             // Otherwise, type mismatch error
             _ => {
-                errors.push(SemanticCheckError::TypeMismatch(
-                        format!("binary op {:?} is not supported: \nlhs: {:?}\nrhs: {:?}", op, lhs, rhs)));
+                errors.push(SemanticCheckError::TypeMismatch(format!(
+                    "binary op {:?} is not supported: \nlhs: {:?}\nrhs: {:?}",
+                    op, lhs, rhs
+                )));
                 return Err(errors);
             }
         }
-        Ok(ir::Binary {
-            lhs: lhs,
-            rhs: rhs,
-            op: op,
-        })
+        Ok(ir::Binary { lhs, rhs, op })
     }
 
-    fn get_ir_expr(&self, t: token::Expr) -> Result<ir::Expr, Vec<SemanticCheckError>> {
+    fn get_ir_expr(&self, t: token::Expr) -> IRResult<ir::Expr> {
         let expr_type = match *t {
             token::Expr0::Location(t) => match self.get_ir_location(t) {
                 Ok(a) => Ok(ir::ExprType::Location(a)),
@@ -379,7 +378,7 @@ impl SemanticAnalyzer {
             Err(e) => return Err(vec![e]),
         };
         Ok(create_rc(ir::Expr0 {
-            type_: type_,
+            type_,
             expr: expr_type,
         }))
     }
@@ -409,20 +408,20 @@ impl SemanticAnalyzer {
         let dst_type = dst.decl.borrow().type_;
         let val_type = val.borrow().type_;
         if dst_type != val_type {
-            errors.push(SemanticCheckError::TypeMismatch(String::from("assign type not match")));
+            errors.push(SemanticCheckError::TypeMismatch(String::from(
+                "assign type not match",
+            )));
             return Err(errors);
         }
 
         if op != ir::AssignOp::Assign && dst_type != ir::Type::Int {
-            errors.push(SemanticCheckError::TypeMismatch(String::from("non-int assign")));
+            errors.push(SemanticCheckError::TypeMismatch(String::from(
+                "non-int assign",
+            )));
             return Err(errors);
         }
 
-        Ok(ir::Assign {
-            dst: dst,
-            op: op,
-            val: val,
-        })
+        Ok(ir::Assign { dst, op, val })
     }
 
     fn get_ir_ifelse(&self, t: token::IfElse) -> IRResult<ir::IfElse> {
@@ -432,7 +431,7 @@ impl SemanticAnalyzer {
         };
         check_type_or_early_return!(cond, ir::Type::Bool);
         let ifelse = create_rc(ir::IfElse0 {
-            cond: cond,
+            cond,
             true_block: None,
             false_block: None,
         });
@@ -476,9 +475,7 @@ impl SemanticAnalyzer {
                 func: decl,
                 val: None,
             }),
-            _ => {
-                return Err(vec![SemanticCheckError::ReturnTypeMismatch]);
-            }
+            _ => Err(vec![SemanticCheckError::ReturnTypeMismatch]),
         }
     }
     fn get_ir_break(&self) -> Result<ir::Break, Vec<SemanticCheckError>> {
@@ -487,9 +484,7 @@ impl SemanticAnalyzer {
             Some(f) => f,
             None => return Err(vec![SemanticCheckError::BreakOutOfForScope]),
         };
-        Ok(ir::Break{
-            for_: for_
-        })
+        Ok(ir::Break { for_ })
     }
     fn get_ir_continue(&self) -> Result<ir::Continue, Vec<SemanticCheckError>> {
         let env_ctx = EnvContext::new(self.envs.clone(), EnvType::NoEnv);
@@ -497,9 +492,7 @@ impl SemanticAnalyzer {
             Some(f) => f,
             None => return Err(vec![SemanticCheckError::ContinueOutOfForScope]),
         };
-        Ok(ir::Continue{
-            for_: for_
-        })
+        Ok(ir::Continue { for_ })
     }
     fn get_ir_for(&self, t: token::Loop) -> Result<ir::For, Vec<SemanticCheckError>> {
         let start = unwrap_or_early_return!(self.get_ir_expr(t.start));
@@ -513,12 +506,15 @@ impl SemanticAnalyzer {
         });
         let for_ = create_rc(ir::For0 {
             index_decl: index_decl.clone(),
-            start: start,
-            end: end,
+            start,
+            end,
             block: None,
         });
         let env_ctx = EnvContext::new(self.envs.clone(), EnvType::For(for_.clone()));
-        env_ctx.add_var(&index_decl);
+        if env_ctx.add_var(&index_decl).is_err() {
+            let e = SemanticCheckError::DuplicatedSymbol(index_decl.borrow().name.clone());
+            return Err(vec![e]);
+        }
 
         let block = unwrap_or_early_return!(self.get_ir_block(t.block, EnvType::NoEnv));
         for_.borrow_mut().block = Some(block);
@@ -628,29 +624,28 @@ impl SemanticAnalyzer {
     fn get_ir_method_decl(&self, t: token::MethodDecl) -> IRResult<ir::MethodDecl> {
         let mut errors = Vec::new();
         let return_type = ir::Type::from(&t.return_type);
-        let args: Vec<ir::VarDecl> = t 
-            .args
-            .iter()
-            .map(|a| self.get_ir_method_arg(a))
-            .collect();
-        
+        let args: Vec<ir::VarDecl> = t.args.iter().map(|a| self.get_ir_method_arg(a)).collect();
+
         let ir_decl = ir::MethodDecl0 {
-            return_type: return_type,
+            return_type,
             name: t.name,
-            args: args,
+            args,
             block: None,
         };
         let ir_decl = create_rc(ir_decl);
 
         let env_ctx = EnvContext::new(self.envs.clone(), EnvType::Method(ir_decl.clone()));
-        
+
         // add method argument to symbol table
         for arg in &ir_decl.borrow().args {
-            env_ctx.add_var(&arg);
+            if env_ctx.add_var(arg).is_err() {
+                let e = SemanticCheckError::DuplicatedSymbol(arg.borrow().name.clone());
+                return Err(vec![e]);
+            }
         }
-        
+
         // add method declaration for recursive call
-        if let Err(_) = env_ctx.add_method(&ir_decl) {
+        if env_ctx.add_method(&ir_decl).is_err() {
             let e = SemanticCheckError::DuplicatedSymbol(ir_decl.borrow().name.clone());
             errors.push(e);
         }
@@ -659,11 +654,10 @@ impl SemanticAnalyzer {
         let block = self.get_ir_block(t.block, EnvType::NoEnv);
         if let Err(e) = block {
             errors.extend(e);
-        }
-        else {
+        } else {
             ir_decl.borrow_mut().block = Some(block.ok().unwrap());
         }
-        
+
         if errors.is_empty() {
             Ok(ir_decl)
         } else {
@@ -730,7 +724,7 @@ impl SemanticAnalyzer {
             .filter(|res| res.is_err())
             .map(|res| res.err().unwrap())
             .collect();
-        if errors.len() == 0 {
+        if errors.is_empty() {
             Ok(())
         } else {
             Err(errors)

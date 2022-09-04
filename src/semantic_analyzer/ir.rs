@@ -54,7 +54,7 @@ pub struct Continue {
     pub for_: For,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AssignOp {
     Assign,
     AddAssign,
@@ -75,7 +75,7 @@ impl AssignOp {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Type {
     Int,
     Bool,
@@ -92,7 +92,7 @@ impl Type {
     }
 }
 
-#[derive(Debug, Copy, PartialEq, Clone)]
+#[derive(Debug, Copy, PartialEq, Eq, Clone)]
 pub enum BinaryOp {
     Or,  // logical or
     And, // logical and
@@ -260,26 +260,12 @@ impl VarDecl0 {
 }
 
 #[derive(Debug)]
-pub enum MemberDecl {
-    FieldDecl(VarDecl),
-    MethodDecl(MethodDecl),
-}
-
-#[derive(Debug)]
 pub struct ProgramClassDecl {
     pub field_decls: Vec<VarDecl>,
     pub method_decls: Vec<MethodDecl>,
 }
 
-#[derive(Debug)]
-pub enum IR {
-    Expr(Expr),
-    Statement(Statement),
-    ProgramClassDecl(ProgramClassDecl),
-    MemberDecl(MemberDecl),
-    VarDecl(VarDecl),
-    Type(Type),
-}
+
 
 #[derive(Debug)]
 pub struct IRRoot {
@@ -287,5 +273,4 @@ pub struct IRRoot {
 }
 
 pub type StringLiteral = String;
-pub type MethodName = String;
 pub type Identifier = String;

@@ -14,7 +14,7 @@ pub fn has_main(p: &Program) -> Result<(), SemanticCheckError> {
     let has_main = p
         .method_decls
         .iter()
-        .filter(|&m| m.name == "main" && m.args.len() == 0)
+        .filter(|&m| m.name == "main" && m.args.is_empty())
         .count()
         == 1;
     if has_main {
@@ -36,9 +36,8 @@ pub fn is_array_size_positive(p: &Program) -> Result<(), SemanticCheckError> {
                 .iter()
                 .filter(|a| a.arr_size.is_some())
                 .map(|a| a.arr_size.unwrap() > 0)
-                .fold(true, |a, b| a && b)
-        })
-        .fold(true, |a, b| a && b);
+                .all(|b|b)
+        }).all(|b|b);
     if is_valid {
         Ok(())
     } else {

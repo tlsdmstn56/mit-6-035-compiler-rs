@@ -1,14 +1,13 @@
-use std::collections::HashMap;
-use super::ir::{
-    For, IfElse, VarDecl, MethodDecl};
-use std::rc::Rc;
+use super::ir::{For, IfElse, MethodDecl, VarDecl};
 use std::cell::RefCell;
-use std::mem::{discriminant};
+use std::collections::HashMap;
+use std::mem::discriminant;
+use std::rc::Rc;
 
 #[derive(Debug, Clone)]
 pub enum EnvType {
     Global,
-    Anon,  
+    Anon,
     Method(MethodDecl),
     For(For),
     If(IfElse),
@@ -21,10 +20,9 @@ pub enum EnvError {
     DuplicatedVar(VarDecl),
 }
 
-
 struct Env {
-    pub type_: EnvType,    
-    pub table:HashMap<String, VarDecl>,
+    pub type_: EnvType,
+    pub table: HashMap<String, VarDecl>,
 }
 
 impl Env {
@@ -42,7 +40,7 @@ pub struct EnvContext {
     t: EnvType,
 }
 
-impl Drop for EnvContext{
+impl Drop for EnvContext {
     fn drop(&mut self) {
         let desc = discriminant(&self.t);
         let noenv_desc = discriminant(&EnvType::NoEnv);
@@ -59,25 +57,22 @@ impl EnvContext {
         if desc != noenv_desc {
             envs.borrow_mut().push(t.clone());
         }
-        Self {
-            envs:envs,
-            t: t,
-        }
+        Self { envs, t }
     }
-     
+
     /// Add a new var declation in current env
-    pub fn add_var(&self, f: &VarDecl) -> Result<(), EnvError>  {
+    pub fn add_var(&self, f: &VarDecl) -> Result<(), EnvError> {
         self.envs.borrow_mut().add_var(f)
     }
 
-    /// Add a new method 
+    /// Add a new method
     pub fn add_method(&self, m: &MethodDecl) -> Result<(), EnvError> {
         self.envs.borrow_mut().add_method(m)
     }
     pub fn find_var_decl(&self, name: &String) -> Option<VarDecl> {
         self.envs.borrow().find_var_decl(name)
     }
-    
+
     pub fn get_current_scope_method_decl(&self) -> Option<MethodDecl> {
         self.envs.borrow().get_current_scope_method_decl()
     }
@@ -98,43 +93,49 @@ impl EnvStack {
     pub fn new() -> Self {
         Self {
             methods: HashMap::new(),
-            envs: Vec::new()
+            envs: Vec::new(),
         }
     }
 
     /// Push Env
-    /// 
+    ///
     /// This usually means being into a new scope
     pub fn push(&mut self, t: EnvType) {
         self.envs.push(Env::new(t));
     }
     /// Pop Env
-    /// 
+    ///
     /// This usually means getting out of a scope
-    pub fn pop(&mut self) /* -> Env*/ {
+    pub fn pop(&mut self) /* -> Env*/
+    {
         self.envs.pop(); // .unwrap()
     }
-     
+
     /// Add a new var declation in current env
-    pub fn add_var(&mut self, f: &VarDecl) -> Result<(), EnvError>  {
+    pub fn add_var(&mut self, f: &VarDecl) -> Result<(), EnvError> {
         let val = f.clone();
-        let res = self.envs.last_mut().unwrap().table.insert(f.borrow().name.clone(), val);
+        let res = self
+            .envs
+            .last_mut()
+            .unwrap()
+            .table
+            .insert(f.borrow().name.clone(), val);
         match res {
             Some(d) => Err(EnvError::DuplicatedVar(d)),
-            None => Ok(())
+            None => Ok(()),
         }
     }
 
-    /// Add a new method 
+    /// Add a new method
     pub fn add_method(&mut self, m: &MethodDecl) -> Result<(), EnvError> {
         let res = self.methods.insert(m.borrow().name.clone(), m.clone());
         match res {
             Some(dup_decl) => Err(EnvError::DuplicatedMethod(dup_decl)),
-            None => Ok(())
+            None => Ok(()),
         }
     }
 
-    /// Find variable declation with given name in current scope 
+    /// Find variable declation with given name in current scope
     pub fn find_var_decl(&self, name: &String) -> Option<VarDecl> {
         for env in self.envs.iter().rev() {
             match env.table.get(name) {
@@ -144,34 +145,28 @@ impl EnvStack {
         }
         None
     }
-    
+
     /// Find method declation in current scope
     pub fn get_current_scope_method_decl(&self) -> Option<MethodDecl> {
         for env in self.envs.iter().rev() {
-            match &env.type_ {
-                EnvType::Method(m) => return Some(m.clone()),
-                _ => () 
+            if let EnvType::Method(m) = &env.type_ {
+                return Some(m.clone());
             }
         }
         None
     }
-    
+
     /// Find method declation by method name
     pub fn find_method_decl(&self, name: &String) -> Option<MethodDecl> {
-        match self.methods.get(name) {
-            Some(m) => Some(m.clone()),
-            None => None,
-        }
+        self.methods.get(name).cloned()
     }
     /// Find method declation in current scope
     pub fn find_for(&self) -> Option<For> {
         for env in self.envs.iter().rev() {
-            match &env.type_ {
-                EnvType::For(m) => return Some(m.clone()),
-                _ => () 
+            if let EnvType::For(m) = &env.type_ {
+                return Some(m.clone());
             }
         }
         None
     }
 }
-
