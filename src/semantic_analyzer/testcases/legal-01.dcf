@@ -1,8 +1,3 @@
-use decafc::compile;
-
-fn main() {
-    // TODO: example code
-let code = r#"  
 // a quicksort program.  set the "length" parameter in main() to the
 // desired size of the sorted array.  if you want to sort an array
 // bigger than 100 elements, you'll also need to adjust the declaration
@@ -87,8 +82,4 @@ class Program
 	  callout ("printf", "%d\n", A[i]); 
   	}
     }
-}
-"#;    
-    let code = String::from(code);
-    compile(&code);
 }

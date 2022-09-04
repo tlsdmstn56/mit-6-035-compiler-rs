@@ -7,13 +7,14 @@ mod tests {
     use std::path::PathBuf;
     use std::env;
     use super::DecafParser;
+    use crate::test_util::get_current_dir;
     
 macro_rules! test_parser_illegal {
     ( $testname:ident, $filename:expr ) => {
         #[test]
         fn $testname()
         {
-            let path = env::var("CARGO_MANIFEST_DIR").unwrap();
+            let path = get_current_dir();
             let path: PathBuf = [&path, "src", "parser", "testcases", "illegal", $filename].iter().collect();
             let s = read_to_string(&path).unwrap();
             let program = DecafParser::new().parse(&s);
@@ -28,7 +29,7 @@ macro_rules! test_parser_legal {
         #[test]
         fn $testname()
         {
-            let path = env::var("CARGO_MANIFEST_DIR").unwrap();
+            let path = get_current_dir();
             let path: PathBuf = [&path, "src", "parser", "testcases", "legal", $filename].iter().collect();
             let s = read_to_string(&path).unwrap();
             let program = DecafParser::new().parse(&s);

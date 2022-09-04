@@ -1,5 +1,5 @@
 use std::str::FromStr;
-use crate::ast::*;
+use crate::token::*;
 
 grammar; match {
     r"//[^\n\r]*[\n\r]*" => { }, // Ignore C++-style comments
@@ -43,14 +43,12 @@ TVarDecl: VarDecl =
     <t:TType> <i:CommaAtLeast<TIdentifier>> ";" => VarDecl{type_: t, identifiers:i};
 
 TStatement: Statement = {
-    <l: TLocation> <a:TAssignOp> <e:TExpr> ";" => Statement::Assign{dst:l, op: a, val: e},
+    <l: TLocation> <a:TAssignOp> <e:TExpr> ";" => Statement::Assign(Assign{dst:l, op: a, val: e}),
     <m: TMethodCall> ";" => Statement::MethodCall(m),
-    "if" "(" <c:TExpr> ")" <tb:TBlock> => Statement::IfElse{cond:c, true_block: tb, false_block: None},
-    "if" "(" <c:TExpr> ")" <tb:TBlock> "else" <fb:TBlock> 
-         => Statement::IfElse{cond:c, true_block: tb, false_block: Some(fb)},
-    "for" <i:TIdentifier> "=" <s:TExpr> "," <e:TExpr> <b:TBlock>
-        => Statement::Loop{index_var:i, start:s, end:e, block:b },
-    "return" <r:TExpr?> ";" => Statement::Return{val: r},
+    "if" "(" <c:TExpr> ")" <tb:TBlock> => Statement::IfElse(IfElse{cond:c, true_block: tb, false_block: None}),
+    "if" "(" <c:TExpr> ")" <tb:TBlock> "else" <fb:TBlock> => Statement::IfElse(IfElse{cond:c, true_block: tb, false_block: Some(fb)}),
+    "for" <i:TIdentifier> "=" <s:TExpr> "," <e:TExpr> <b:TBlock> => Statement::Loop(Loop{index_var:i, start:s, end:e, block:b }),
+    "return" <r:TExpr?> ";" => Statement::Return(Return{val: r}),
     "break" ";" => Statement::Break,
     "continue" ";" => Statement::Continue,
     <b:TBlock> => Statement::Block(b),
@@ -61,13 +59,13 @@ TBlock: Block =
 
 
 TLocation: Location = {
-    <i:TIdentifier> => Location{name: i, arr_size: Box::new(Expr0::Literal(Literal::Int(1)))},
-    <i:TIdentifier> "[" <a:TExpr> "]" => Location{name: i, arr_size: a},
+    <i:TIdentifier> => Location{name: i, arr_size: None},
+    <i:TIdentifier> "[" <a:TExpr> "]" => Location{name: i, arr_size: Some(a)},
 };
 
 TFieldDecl0: FieldDecl0 = {
-    <i: TIdentifier> => FieldDecl0{name: i, arr_size: 1},
-    <i: TIdentifier> "[" <n:TIntLiteral> "]" => FieldDecl0{name: i, arr_size: n},
+    <i: TIdentifier> => FieldDecl0{name: i, arr_size: None},
+    <i: TIdentifier> "[" <n:TIntLiteral> "]" => FieldDecl0{name: i, arr_size: Some(n)},
 };
 
 TFieldDecl: FieldDecl = {
@@ -134,18 +132,18 @@ TBinaryOp: BinaryOp = {
 };
 
 TMethodCall: MethodCall = {
-    <name: TMethodName> "(" <args: Comma<TExpr>> ")" => MethodCall::Method{
+    <name: TMethodName> "(" <args: Comma<TExpr>> ")" => MethodCall::Method(Method{
         name: name,
         args: args,
-    },
-    "callout" "(" <name: TStringLiteral> ")" => MethodCall::Callout{
+    }),
+    "callout" "(" <name: TStringLiteral> ")" => MethodCall::Callout(Callout{
         name: name,
         args: Vec::new(), 
-    },
-    "callout" "(" <name: TStringLiteral> "," <args: Comma<TCalloutArg>> ")" => MethodCall::Callout{
+    }),
+    "callout" "(" <name: TStringLiteral> "," <args: Comma<TCalloutArg>> ")" => MethodCall::Callout(Callout{
         name: name,
         args: args,
-    },
+    }),
 };
 
 TLiteral: Literal = {
