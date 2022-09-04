@@ -69,14 +69,7 @@ impl SemanticAnalyzer {
         if let Err(errors) = self.pre_ir_check(&p) {
             return Err(errors);
         }
-        let root = match self.construct_ir(p) {
-            Err(errors) => return Err(errors),
-            Ok(root) => root,
-        };
-        if let Err(errors) = self.post_ir_check(&root) {
-            return Err(errors);
-        }
-        Ok(root)
+        self.construct_ir(p)
     }
 
     fn get_ir_field_decls(
@@ -698,7 +691,7 @@ impl SemanticAnalyzer {
     }
 
     fn construct_ir(&self, p: token::Program) -> Result<ir::IRRoot, Vec<SemanticCheckError>> {
-        let env_ctx = EnvContext::new(self.envs.clone(), EnvType::Global);
+        let _env_ctx = EnvContext::new(self.envs.clone(), EnvType::Global);
         let mut errors = Vec::new();
         let field_decls = self.get_ir_field_decls(p.field_decls);
         let field_decls = match field_decls {
@@ -731,20 +724,6 @@ impl SemanticAnalyzer {
             /* pass 3 */ has_main,
             /* pass 4 */ is_array_size_positive,
         ]);
-        let errors: Vec<SemanticCheckError> = passes
-            .iter()
-            .map(|&pass| pass(p))
-            .filter(|res| res.is_err())
-            .map(|res| res.err().unwrap())
-            .collect();
-        if errors.len() == 0 {
-            Ok(())
-        } else {
-            Err(errors)
-        }
-    }
-    fn post_ir_check(&self, p: &ir::IRRoot) -> Result<(), Vec<SemanticCheckError>> {
-        let passes = Vec::from([|p: &ir::IRRoot| -> Result<(), SemanticCheckError> { Ok(()) }]);
         let errors: Vec<SemanticCheckError> = passes
             .iter()
             .map(|&pass| pass(p))

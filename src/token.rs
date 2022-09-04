@@ -86,10 +86,6 @@ pub struct Program {
 }
 
 pub type MethodName = String;
-pub type Alphabet = char;
-pub type Digit = char;
-pub type Char = char;
-pub type AlphaNum = char;
 pub type Identifier = String;
 
 #[derive(Debug)]

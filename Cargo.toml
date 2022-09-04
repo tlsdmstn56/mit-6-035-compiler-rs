@@ -1,5 +1,5 @@
 [package]
-name = "mit-6-035-compiler"
+name = "decafc"
 version = "0.1.0"
 edition = "2021"
 authors = ["Eunsoo Sheen <eunsoo.sheen@gmail.com>"]
