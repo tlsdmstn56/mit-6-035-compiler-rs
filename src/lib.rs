@@ -4,6 +4,8 @@ mod token;
 mod parser;
 mod semantic_analyzer;
 mod assembler;
+mod linker;
+
 lalrpop_mod!(#[allow(clippy::all)] decaf);
 
 #[cfg(test)]
