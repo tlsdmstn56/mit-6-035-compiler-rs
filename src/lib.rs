@@ -3,6 +3,7 @@
 mod token;
 mod parser;
 mod semantic_analyzer;
+mod assembler;
 lalrpop_mod!(#[allow(clippy::all)] decaf);
 
 #[cfg(test)]

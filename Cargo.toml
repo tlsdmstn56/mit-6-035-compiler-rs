@@ -10,3 +10,4 @@ lalrpop = "0.19.8"
 [dependencies]
 lalrpop-util = { version = "0.19.8", features = ["lexer"] }
 regex = "1.5.6"
+tempfile = "3.3.0"
