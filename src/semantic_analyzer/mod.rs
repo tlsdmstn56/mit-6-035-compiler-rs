@@ -1,12 +1,13 @@
 mod env;
-mod ir;
+pub mod ir;
 mod passes;
 
 use crate::token;
 use env::{EnvContext, EnvStack, EnvType};
-use passes::*;
 use std::cell::RefCell;
 use std::rc::Rc;
+
+use passes::*;
 
 macro_rules! unwrap_or_early_return {
     ($t:expr) => {
@@ -737,7 +738,6 @@ mod tests {
     use super::*;
     use crate::parser::DecafParser;
     use crate::test_util::get_current_dir;
-    use std::env;
     use std::fs::read_to_string;
     use std::path::PathBuf;
 
