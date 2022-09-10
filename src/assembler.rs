@@ -31,7 +31,9 @@ pub fn assemble<P: AsRef<Path>>(asm: &String, path: P) -> Result<(), Box<dyn std
     {
         
         let child_stdin = cmd.stdin.as_mut().take().unwrap();
-        child_stdin.write_all(asm.as_bytes());
+        if let Err(e) = child_stdin.write_all(asm.as_bytes()) {
+            return Err(Box::new(e));
+        }
     }
 
     match cmd.wait_with_output() {

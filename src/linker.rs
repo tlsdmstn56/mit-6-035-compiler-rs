@@ -21,7 +21,6 @@ impl Debug for LinkerError {
     }
 }
 
-// ld /usr/lib/x86_64-linux-gnu/crti.o /usr/lib/x86_64-linux-gnu/crtn.o /usr/lib/x86_64-linux-gnu/crt1.o -lc main.o -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o main_ELF_executable
 pub fn link<P1, P2, T, I>(obj_path: P1, out_path: P2, libs: I) -> Result<(), Box<dyn std::error::Error>>
 where
     P1: AsRef<Path>,
@@ -29,12 +28,14 @@ where
     T: AsRef<OsStr>,
     I: IntoIterator<Item = T>,
 {
+    let libs = libs.into_iter().map(|lib| format!("-l{:?}", lib.as_ref()));
     let cmd = Command::new("ld")
         .arg("/usr/lib/x86_64-linux-gnu/crti.o")
         .arg("/usr/lib/x86_64-linux-gnu/crtn.o")
         .arg("/usr/lib/x86_64-linux-gnu/crt1.o")
         .arg("-lc") // libc.so
         .arg(obj_path.as_ref())
+        .args(libs)
         .arg("-dynamic-linker") // libc.so
         .arg("/lib64/ld-linux-x86-64.so.2")
         .arg("-o")
@@ -62,16 +63,21 @@ mod tests {
 
     #[test]
     fn test_link() {
+        // assemble
         let asm_file = NamedTempFile::new().unwrap();
         let asm_path = asm_file.into_temp_path();
         let code = String::from(TEST_ASM);
         let res = assemble(&code, &asm_path);
         assert!(res.is_ok());
+
+        // link object file
         let out_file = NamedTempFile::new().unwrap();
         let out_path = out_file.into_temp_path();
         let libs = Vec::<String>::new();
         let res = link(&asm_path, &out_path, libs);
         assert!(res.is_ok());
+
+        // run the compiled executable
         let res = Command::new(&out_path).output().unwrap();
         let stdout = String::from_utf8_lossy(&res.stdout).into_owned();
         assert_eq!(stdout, "Hello World\n");
