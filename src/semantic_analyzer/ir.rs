@@ -1,8 +1,16 @@
 use crate::token;
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::hash::{Hash, Hasher};
 
-#[derive(Debug)]
+macro_rules! make_rc {
+    ($inner_type:ty, $name:ident) => {
+        pub type $name = Rc<RefCell<$inner_type>>;
+            
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct Block {
     pub var_decls: Vec<VarDecl>,
     pub statements: Vec<Statement>,
@@ -21,22 +29,23 @@ pub struct Assign {
     pub val: Expr,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct IfElse0 {
     pub cond: Expr,
     pub true_block: Option<Block>,
     pub false_block: Option<Block>,
 }
-pub type IfElse = Rc<RefCell<IfElse0>>;
 
-#[derive(Debug)]
+make_rc!(IfElse0, IfElse);
+
+#[derive(Debug, Clone)]
 pub struct For0 {
     pub index_decl: VarDecl,
     pub start: Expr,
     pub end: Expr,
     pub block: Option<Block>,
 }
-pub type For = Rc<RefCell<For0>>;
+make_rc!(For0, For);
 
 #[derive(Debug)]
 pub struct Return {
@@ -192,6 +201,62 @@ pub struct Callout {
     pub name: StringLiteral,
     pub args: Vec<CalloutArg>,
 }
+
+#[derive(Hash, PartialEq, Eq)]
+enum CalloutArgType {
+    Int,
+    Bool,
+    String,
+}
+
+impl PartialEq for Callout {
+    fn eq(&self, other: &Self) -> bool {
+        if self.name != other.name {
+            false
+        } else {
+            let self_args_types = self.get_args_types(); 
+            let other_args_types = other.get_args_types(); 
+            if self_args_types.len() != other_args_types.len() {
+                false
+            } else {
+                self_args_types.iter().zip(other_args_types.iter()).map(|(a, b)| a == b).all(|b| b)
+            }
+        }
+    }
+}
+
+impl Eq for Callout {}
+
+impl Callout {
+    fn get_args_types(&self) -> Vec<CalloutArgType> {
+        self.args.iter().map(|arg| match arg{
+                CalloutArg::StringLiteral(_) => CalloutArgType::String,
+                CalloutArg::Expr(e) => match e.borrow().type_ {
+                    Type::Bool => CalloutArgType::Bool,
+                    Type::Int => CalloutArgType::Int,
+                    _ => panic!("No such case"),
+                }
+        }).collect()
+    }
+}
+
+
+impl Hash for Callout {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.name.hash(state);
+        for arg in &self.args {
+            match arg {
+                CalloutArg::StringLiteral(_) => CalloutArgType::String.hash(state),
+                CalloutArg::Expr(e) => match e.borrow().type_ {
+                    Type::Bool => CalloutArgType::Bool.hash(state),
+                    Type::Int => CalloutArgType::Int.hash(state),
+                    _ => (),
+                }
+            }
+        }
+    }
+}
+
 #[derive(Debug)]
 pub enum Call {
     Method(Method),
@@ -204,7 +269,7 @@ pub enum Literal {
     Boolean(bool),
 }
 
-pub type Expr = Rc<RefCell<Expr0>>;
+make_rc!(Expr0, Expr);
 
 #[derive(Debug)]
 pub struct Expr0 {
@@ -221,7 +286,7 @@ pub enum ExprType {
     Binary(Binary),
 }
 
-pub type Statement = Rc<RefCell<Statement0>>;
+make_rc!(Statement0, Statement);
 
 #[derive(Debug)]
 pub enum Statement0 {
@@ -235,9 +300,9 @@ pub enum Statement0 {
     Block(Block),
 }
 
-pub type MethodDecl = Rc<RefCell<MethodDecl0>>;
+make_rc!(MethodDecl0, MethodDecl);
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MethodDecl0 {
     pub return_type: Type,
     pub name: Identifier,
@@ -245,8 +310,10 @@ pub struct MethodDecl0 {
     pub block: Option<Block>,
 }
 
-pub type VarDecl = Rc<RefCell<VarDecl0>>;
-#[derive(Debug)]
+
+make_rc!(VarDecl0, VarDecl);
+
+#[derive(Debug, Clone)]
 pub struct VarDecl0 {
     pub type_: Type,
     pub name: Identifier,
