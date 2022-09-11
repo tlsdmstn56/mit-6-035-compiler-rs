@@ -5,8 +5,9 @@ mod parser;
 mod semantic_analyzer;
 mod assembler;
 mod linker;
-mod ssagen;
-mod codegen;
+// TODO: enable
+// mod ssagen;
+// mod codegen;
 mod misc;
 
 lalrpop_mod!(#[allow(clippy::all)] decaf);
@@ -16,16 +17,19 @@ mod test_util;
 
 use parser::DecafParser;
 use semantic_analyzer::SemanticAnalyzer;
-use ssagen::SSA;
-use codegen::{generate_asm, ArchType};
+// TODO: enable
+// use ssagen::SSA;
+// use codegen::{generate_asm, ArchType};
 
 /// compile decaf source code to x86-64 assembly code
-/// TODO: add compile error code
 pub fn compile(code: &str) -> String {
+    // TODO: add compile error code
     let parsed = DecafParser::new().parse(code).unwrap();
     let ir = SemanticAnalyzer::new().create_ir(parsed);
-    let ssa = SSA::new(ir.unwrap());
-    generate_asm(ssa, ArchType::X86_64)
+    // TODO: enable
+    // let ssa = SSA::new(ir.unwrap());
+    // generate_asm(ssa, ArchType::X86_64)
+    String::new()
 }
 
 #[cfg(test)]

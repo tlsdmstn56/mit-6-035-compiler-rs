@@ -6,6 +6,7 @@ use std::cmp::PartialEq;
 #[derive(Clone)]
 pub struct HashableRc<T>(Rc<RefCell<T>>);
 
+
 impl<T> HashableRc<T> {
     pub fn new(e: Rc<RefCell<T>>) -> Self {
         Self(e)
@@ -13,6 +14,10 @@ impl<T> HashableRc<T> {
 
     fn get_addr(&self) -> usize {
         self.0.as_ptr() as usize
+    }
+
+    pub fn get(&self) -> Rc<RefCell<T>> {
+        self.0.clone()
     }
 }
 

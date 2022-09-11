@@ -1,11 +1,7 @@
-mod inst;
-mod llir_method_gen_context;
-mod visit;
-
 use crate::misc::HashableRc;
 use crate::semantic_analyzer::ir as sir;
 use inst::Inst;
-use llir_method_gen_context::LLIRMethodGenContext;
+use llir_ctx::LLIRMethodGenContext;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;

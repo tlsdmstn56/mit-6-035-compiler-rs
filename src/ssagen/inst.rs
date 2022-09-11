@@ -2,25 +2,25 @@ use super::VarDef;
 
 #[derive(Clone)]
 pub enum Inst {
-    Alloca,
     Load(Load),
-    Store,
+    Store(Store),
     Label(String),
     IAdd(Binary),
     ISub(Binary),
     IMul(Binary),
     IDiv(Binary),
-}
-
-#[derive(Clone)]
-pub struct Register {
-    pub id: u32,
+    IMod(Binary),
 }
 
 #[derive(Clone)]
 pub struct Load {
-    pub dst: Register,
+    pub dst: SSAVar,
     pub src: Memory,
+}
+#[derive(Clone)]
+pub struct Store {
+    pub src: SSAVar,
+    pub dst: Memory,
 }
 
 #[derive(Clone)]
@@ -28,18 +28,6 @@ pub struct Binary {
     pub dst: Location,
     pub lhs: Operand,
     pub rhs: Operand,
-}
-
-#[derive(Clone)]
-pub struct Memory {
-    pub decl: VarDef,
-    pub offset: Option<Box<Location>>,
-}
-
-#[derive(Clone)]
-pub enum Location {
-    Memory(Memory),
-    Register(Register),
 }
 
 #[derive(Clone)]

@@ -30,12 +30,6 @@ impl RegisterGenerator {
             reg_id: Cell::new(0),
         }
     }
-
-    // pub fn generate(&self, decl: Option<VarDef>) -> Register {
-    //     let id = self.reg_id.get();
-    //     self.reg_id.set(id + 1);
-    //     Register { id, decl }
-    // }
 }
 
 impl LLIRMethodGenContext {
@@ -52,11 +46,6 @@ impl LLIRMethodGenContext {
         }
     }
 
-
-    // pub fn generate(&mut self, decl: Option<VarDef>) -> Register {
-    //     let reg = self.reggen.generate(decl);
-    //     reg
-    // }
     pub fn add_var(&mut self, d: &sir::VarDecl) {
         let key = HashableRc::new(d.clone());
         let val = d.to_llir_var_def();

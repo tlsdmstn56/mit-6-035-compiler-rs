@@ -16,13 +16,13 @@ pub struct Block {
     pub statements: Vec<Statement>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Location {
     pub decl: VarDecl,
     pub arr_size: Option<Expr>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Assign {
     pub dst: Location,
     pub op: AssignOp,
@@ -47,7 +47,7 @@ pub struct For0 {
 }
 make_rc!(For0, For);
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Return {
     pub func: MethodDecl,
     pub val: Option<Expr>,
@@ -184,19 +184,19 @@ pub struct Unary {
     pub op: UnaryOp,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum CalloutArg {
     Expr(Expr),
     StringLiteral(StringLiteral),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Method {
     pub decl: MethodDecl,
     pub args: Vec<Expr>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Callout {
     pub name: StringLiteral,
     pub args: Vec<CalloutArg>,
@@ -257,7 +257,7 @@ impl Hash for Callout {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Call {
     Method(Method),
     Callout(Callout),
@@ -341,3 +341,6 @@ pub struct IRRoot {
 
 pub type StringLiteral = String;
 pub type Identifier = String;
+
+
+

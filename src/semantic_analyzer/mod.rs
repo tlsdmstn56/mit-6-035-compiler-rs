@@ -1,6 +1,7 @@
 mod env;
 pub mod ir;
 mod passes;
+mod cfg;
 
 use crate::token;
 use env::{EnvContext, EnvStack, EnvType};
